@@ -10,7 +10,9 @@ mod error;
 
 use server::Server;
 
-fn main() {
-    let server = Server::new("127.0.0.1:1935".to_string());
-    server.run();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let server = Server::new("127.0.0.1:1935".to_owned());
+    server.run().await?;
+    Ok(())
 }
