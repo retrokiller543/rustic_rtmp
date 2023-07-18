@@ -2,7 +2,6 @@
 
 mod protocol;
 mod stream;
-mod message;
 mod server;
 mod utils;
 mod amf;
