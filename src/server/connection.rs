@@ -5,9 +5,6 @@
 // 3) The client completes the handshake by sending a 'C2' packet that mirrors the server's 'S1' packet.
 
 // Path: src/connection.rs
-
-
-use std::io::{Read, Write};
 use rand::Rng;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
