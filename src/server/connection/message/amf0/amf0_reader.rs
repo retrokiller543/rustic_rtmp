@@ -43,6 +43,7 @@ impl Amf0Reader {
         }
 
         let markers = self.reader.read_u8()?;
+        println!("markers: {:?}", markers);
 
         if markers == amf0_markers::OBJECT_END {
             return Ok(Amf0ValueType::END);
@@ -99,7 +100,9 @@ impl Amf0Reader {
     }
 
     pub fn read_string(&mut self) -> Result<Amf0ValueType, Amf0ReadError> {
+        println!("read_string");
         let raw_string = self.read_raw_string()?;
+        println!("raw_string: {:?}", raw_string);
         Ok(Amf0ValueType::UTF8String(raw_string))
     }
 

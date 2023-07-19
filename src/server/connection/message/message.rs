@@ -10,6 +10,10 @@
     play
 */
 
+use bytes::BytesMut;
+use bytesio::bytes_reader::BytesReader;
+
+use crate::server::connection::message::amf0::{amf0_reader::Amf0Reader, define::Amf0ValueType};
 
 #[derive(Debug)]
 pub enum RtmpMessage {
@@ -65,9 +69,69 @@ impl ConnectObject {
         }
     }
 
-    fn parse(cursor: &mut std::io::Cursor<&[u8]>) -> Result<ConnectObject, Box<dyn std::error::Error>> {
+    pub fn parse(data: &mut &[u8]) -> Result<ConnectObject, Box<dyn std::error::Error>> {
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
         let mut connect_object = ConnectObject::default();
-    
+
+        // Read the command object
+        println!("Parsing command object...");
+        match reader.read_any()? {
+            Amf0ValueType::Object(obj) => {
+                for (key, value) in obj {
+                    match key.as_str() {
+                        "app" => {
+                            if let Amf0ValueType::UTF8String(s) = value {
+                                connect_object.app = s;
+                            }
+                        }
+                        "flashVer" => {
+                            if let Amf0ValueType::UTF8String(s) = value {
+                                connect_object.flash_ver = s;
+                            }
+                        }
+                        "tcUrl" => {
+                            if let Amf0ValueType::UTF8String(s) = value {
+                                connect_object.tc_url = s;
+                            }
+                        }
+                        "fpad" => {
+                            if let Amf0ValueType::Boolean(b) = value {
+                                connect_object.fpad = b;
+                            }
+                        }
+                        "audioCodecs" => {
+                            if let Amf0ValueType::Number(n) = value {
+                                connect_object.audio_codecs = n as u16;
+                            }
+                        }
+                        "videoCodecs" => {
+                            if let Amf0ValueType::Number(n) = value {
+                                connect_object.video_codecs = n as u8;
+                            }
+                        }
+                        "videoFunction" => {
+                            if let Amf0ValueType::Number(n) = value {
+                                connect_object.video_function = n as u8;
+                            }
+                        }
+                        "pageUrl" => {
+                            if let Amf0ValueType::UTF8String(s) = value {
+                                connect_object.page_url = s;
+                            }
+                        }
+                        "objectEncoding" => {
+                            if let Amf0ValueType::Number(n) = value {
+                                connect_object.object_encoding = n as u8;
+                            }
+                        }
+                        // ... handle other fields ...
+                        _ => {}
+                    }
+                }
+            }
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command object"))),
+        }
+
         Ok(connect_object)
     }
 }
@@ -86,8 +150,37 @@ impl ConnectMessage {
         }
     }
 
-    pub fn parse(data: &[u8]) -> Result<ConnectMessage, Box<dyn std::error::Error>> {
-        let connect_message = ConnectMessage::new(0, ConnectObject::default());
+    pub fn parse(mut data: &[u8]) -> Result<ConnectMessage, Box<dyn std::error::Error>> {
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut connect_message = ConnectMessage::new(0, ConnectObject::default());
+
+        // Read the command name (should be "connect")
+        println!("Parsing command name...");
+        match reader.read_any()? {
+            Amf0ValueType::UTF8String(_s) => {
+                /*
+                if s != "connect" {
+                    println!("Expected 'connect' command, got '{}'", s);
+                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected 'connect' command")));
+                }*/
+            }
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected 'connect' command"))),
+        }
+
+        // Read the transaction ID
+        println!("Parsing transaction ID...");
+        match reader.read_any()? {
+            Amf0ValueType::Number(n) => {
+                println!("Transaction ID: {}", n);
+                connect_message.id = n as usize;
+            }
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction ID"))),
+        }
+
+        let connect_object = ConnectObject::parse(&mut data)?;
+
+        connect_message.connect_object = connect_object;
+
         Ok(connect_message)
     }
 }
@@ -115,5 +208,3 @@ pub struct PauseMessage {
     pub is_paused: bool,
     // Add other fields as needed
 }
-
-

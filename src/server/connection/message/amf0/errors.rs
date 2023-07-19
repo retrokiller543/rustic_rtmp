@@ -39,6 +39,8 @@ impl From<BytesReadError> for Amf0ReadError {
     }
 }
 
+impl std::error::Error for Amf0ReadError {}
+
 #[derive(Debug, Fail)]
 pub enum Amf0WriteErrorValue {
     #[fail(display = "normal string too long")]
@@ -76,6 +78,7 @@ impl fmt::Display for Amf0ReadError {
     }
 }
 
+/*
 impl Fail for Amf0ReadError {
     fn cause(&self) -> Option<&dyn Fail> {
         self.value.cause()
@@ -85,6 +88,7 @@ impl Fail for Amf0ReadError {
         self.value.backtrace()
     }
 }
+*/
 
 impl fmt::Display for Amf0WriteError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
