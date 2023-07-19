@@ -2,8 +2,7 @@
 
 // Path: src/server.rs
 
-mod connection;
-use connection::Connection;
+use crate::server::connection::connection::Connection;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 use tokio::task;

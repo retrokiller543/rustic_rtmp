@@ -52,8 +52,7 @@
     
      */
 // Path: src/server/connection.rs
-mod message;
-use message::RtmpMessage;
+use crate::server::connection::message::message::{RtmpMessage, ConnectMessage, CreateStreamMessage, PlayMessage, PauseMessage};
 use rand::Rng;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -150,28 +149,28 @@ impl Connection {
         Ok(())
     }
 
-    async fn handle_connect(&mut self, msg: message::ConnectMessage) -> Result<(), Box<dyn std::error::Error>> {
+    async fn handle_connect(&mut self, msg: ConnectMessage) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a Connect message.
         // ...
         println!("Connect message: {:?}", msg);
         Ok(())
     }
     
-    async fn handle_create_stream(&mut self, msg: message::CreateStreamMessage) -> Result<(), Box<dyn std::error::Error>> {
+    async fn handle_create_stream(&mut self, msg: CreateStreamMessage) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a CreateStream message.
         // ...
         println!("CreateStream message: {:?}", msg);
         Ok(())
     }
     
-    async fn handle_play(&mut self, msg: message::PlayMessage) -> Result<(), Box<dyn std::error::Error>> {
+    async fn handle_play(&mut self, msg: PlayMessage) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a Play message.
         // ...
         println!("Play message: {:?}", msg);
         Ok(())
     }
     
-    async fn handle_pause(&mut self, msg: message::PauseMessage) -> Result<(), Box<dyn std::error::Error>> {
+    async fn handle_pause(&mut self, msg: PauseMessage) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a Pause message.
         // ...
         println!("Pause message: {:?}", msg);
@@ -202,7 +201,7 @@ impl Connection {
         
         if data[0] == MESSAGE_TYPE_CONNECT {
             // Parse the data into a ConnectMessage and return it.
-            let message = message::ConnectMessage::parse(data)?;
+            let message = ConnectMessage::parse(data)?;
             return Ok(RtmpMessage::Connect(message));
         }
     
