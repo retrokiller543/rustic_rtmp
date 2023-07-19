@@ -4,7 +4,6 @@ mod protocol;
 mod stream;
 mod server;
 mod utils;
-mod amf;
 mod error;
 
 use server::Server;

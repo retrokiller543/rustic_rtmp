@@ -51,15 +51,21 @@
                             C2 and S2 bits
     
      */
-// Path: src/connection.rs
+// Path: src/server/connection.rs
+mod message;
+use message::RtmpMessage;
 use rand::Rng;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+
+const MESSAGE_TYPE_CONNECT: u8 = 2; // This is just an example. Use the correct value from the RTMP specification.
+
 
 pub struct Connection {
     stream: TcpStream,
 }
 
+#[warn(unreachable_code)]
 impl Connection {
     pub fn new(stream: TcpStream) -> Connection {
         Connection { stream }
@@ -71,7 +77,24 @@ impl Connection {
 
         // Handle RTMP messages.
         // ...
+        loop {
+            let message = self.read_message().await?;
 
+            match message {
+                RtmpMessage::Connect(connect_message) => {
+                    self.handle_connect(connect_message).await?;
+                },
+                RtmpMessage::CreateStream(create_stream_message) => {
+                    self.handle_create_stream(create_stream_message).await?;
+                },
+                RtmpMessage::Play(play_message) => {
+                    self.handle_play(play_message).await?;
+                },
+                RtmpMessage::Pause(pause_message) => {
+                    self.handle_pause(pause_message).await?;
+                },
+            }
+        }
         Ok(())
     }
 
@@ -125,5 +148,67 @@ impl Connection {
         }
     
         Ok(())
+    }
+
+    async fn handle_connect(&mut self, msg: message::ConnectMessage) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle a Connect message.
+        // ...
+        println!("Connect message: {:?}", msg);
+        Ok(())
+    }
+    
+    async fn handle_create_stream(&mut self, msg: message::CreateStreamMessage) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle a CreateStream message.
+        // ...
+        println!("CreateStream message: {:?}", msg);
+        Ok(())
+    }
+    
+    async fn handle_play(&mut self, msg: message::PlayMessage) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle a Play message.
+        // ...
+        println!("Play message: {:?}", msg);
+        Ok(())
+    }
+    
+    async fn handle_pause(&mut self, msg: message::PauseMessage) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle a Pause message.
+        // ...
+        println!("Pause message: {:?}", msg);
+        Ok(())
+    }
+
+    async fn read_message(&mut self) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+        // Create a buffer to hold the message data.
+        let mut buffer = [0; 4096]; // Adjust the size as needed.
+    
+        // Read data from the client into the buffer.
+        let size = self.stream.read(&mut buffer).await?;
+    
+        // Parse the data into an RtmpMessage.
+        let message = Self::parse_message(&buffer[0..size])?;
+    
+        Ok(message)
+    }
+    
+    // This is a placeholder function for parsing a message from the client.
+    // You will need to implement this according to the requirements of your application and the RTMP protocol.
+    fn parse_message(data: &[u8]) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+        // Parse the data into an RtmpMessage.
+        // This will involve examining the data to determine the type of the message,
+        // and then parsing the rest of the data based on that type.
+    
+        println!("Message data: {:?}", data);
+        
+        if data[0] == MESSAGE_TYPE_CONNECT {
+            // Parse the data into a ConnectMessage and return it.
+            let message = message::ConnectMessage::parse(data)?;
+            return Ok(RtmpMessage::Connect(message));
+        }
+    
+        // Add similar code for other message types.
+    
+        // If the data does not match any known message type, return an error.
+        Err("Unknown message type".into())
     }
 }
