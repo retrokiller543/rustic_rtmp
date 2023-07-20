@@ -100,7 +100,6 @@ impl Amf0Reader {
     }
 
     pub fn read_string(&mut self) -> Result<Amf0ValueType, Amf0ReadError> {
-        println!("read_string");
         let raw_string = self.read_raw_string()?;
         println!("raw_string: {:?}", raw_string);
         Ok(Amf0ValueType::UTF8String(raw_string))
@@ -333,4 +332,54 @@ mod tests {
 
         assert_eq!(command_obj_raw.unwrap(), Amf0ValueType::Object(properties));
     }
+
+    #[test]
+    fn test_obs_connect_msg() {
+        let data: [u8; 157] = [
+            2, 0, 7, 99, 111, 110, 110, 101, 99, 116, 0, 63, 240, 0, 0, 0, 0, 0, 0, //body
+            3, 0, 3, 97, 112, 112, 2, 0, 0, 0, 4, 116, 121, 112, 101, 2, 0, 10, 110, 111, 110, 112, 114, 105, 118, 97, 116, 101, 0, 8, 102, 108, 97, 115, 104, 86, 101, 114, 2, 0, 31, 70, 77, 76, 69, 47, 51, 46, 48, 32, 40, 99, 111, 109, 112, 97, 116, 105, 98, 108, 101, 59, 32, 70, 77, 83, 99, 47, 49, 46, 48, 41, 0, 6, 115, 119, 102, 85, 114, 108, 2, 0, 21, 114, 116, 109, 112, 58, 47, 47, 49, 50, 55, 46, 48, 46, 48, 46, 49, 58, 49, 57, 51, 53, 0, 5, 116, 99, 85, 114, 108, 2, 0, 21, 114, 116, 109, 112, 58, 47, 47, 49, 50, 55, 46, 48, 46, 48, 46, 49, 58, 49, 57, 51, 53, 0, 0, 9
+        ];
+
+        let mut bytes_reader = BytesReader::new(BytesMut::new());
+        bytes_reader.extend_from_slice(&data);
+        let mut amf_reader = Amf0Reader::new(bytes_reader);
+
+        let command_name = amf_reader.read_with_type(amf0_markers::STRING).unwrap();
+        assert_eq!(
+            command_name,
+            Amf0ValueType::UTF8String(String::from("connect"))
+        );
+
+        let transaction_id = amf_reader.read_with_type(amf0_markers::NUMBER).unwrap();
+        assert_eq!(transaction_id, Amf0ValueType::Number(1.0));
+
+        let command_obj_raw = amf_reader.read_with_type(amf0_markers::OBJECT).unwrap();
+        let mut properties = IndexMap::new();
+        properties.insert(
+            String::from("app"),
+            Amf0ValueType::UTF8String(String::from("")),
+        );
+        properties.insert(
+            String::from("type"),
+            Amf0ValueType::UTF8String(String::from("nonprivate")),
+        );
+        properties.insert(
+            String::from("flashVer"),
+            Amf0ValueType::UTF8String(String::from("FMLE/3.0 (compatible; FMSc/1.0)")),
+        );
+        properties.insert(
+            String::from("swfUrl"),
+            Amf0ValueType::UTF8String(String::from("rtmp://127.0.0.1:1935")),
+        );
+        properties.insert(
+            String::from("tcUrl"),
+            Amf0ValueType::UTF8String(String::from("rtmp://127.0.0.1:1935")),
+        );
+        assert_eq!(command_obj_raw, Amf0ValueType::Object(properties));
+
+        let _ = amf_reader.read_all();
+
+        print!("test")
+    }
+
 }
