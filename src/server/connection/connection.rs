@@ -183,9 +183,12 @@ impl Connection {
     
         // Read data from the client into the buffer.
         let size = self.stream.read(&mut buffer).await?;
+        println!("Read {} bytes", size);
     
+        let _chunk_header = &buffer[0..28];
+        println!("Chunk header: {:?}", _chunk_header);
         // Parse the data into an RtmpMessage.
-        let message = Self::parse_message(&buffer[0..size])?;
+        let message = Self::parse_message(&buffer[28..size])?;
     
         Ok(message)
     }

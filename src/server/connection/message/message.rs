@@ -72,7 +72,6 @@ impl ConnectObject {
     pub fn parse(data: &mut &[u8]) -> Result<ConnectObject, Box<dyn std::error::Error>> {
         let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
         let mut connect_object = ConnectObject::default();
-
         // Read the command object
         println!("Parsing command object...");
         match reader.read_any()? {
@@ -152,17 +151,20 @@ impl ConnectMessage {
 
     pub fn parse(mut data: &[u8]) -> Result<ConnectMessage, Box<dyn std::error::Error>> {
         let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader_copy = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let tmp = reader_copy.read_all()?;
+        println!("tmp: {:?}", tmp);
         let mut connect_message = ConnectMessage::new(0, ConnectObject::default());
 
         // Read the command name (should be "connect")
         println!("Parsing command name...");
         match reader.read_any()? {
-            Amf0ValueType::UTF8String(_s) => {
-                /*
+            Amf0ValueType::UTF8String(s) => {
+                
                 if s != "connect" {
                     println!("Expected 'connect' command, got '{}'", s);
                     return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected 'connect' command")));
-                }*/
+                }
             }
             _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected 'connect' command"))),
         }
