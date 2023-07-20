@@ -16,13 +16,26 @@
             }
           },
           {
-            "id": "edf2c9dc81293ac5",
+            "id": "8693799739eb1f18",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
                 "file": "Handshake.md",
                 "mode": "source",
+                "backlinks": true,
+                "source": false
+              }
+            }
+          },
+          {
+            "id": "a22dc1c7271b7f1b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Reading The Chunk Head.md",
+                "mode": "preview",
                 "backlinks": true,
                 "source": false
               }
@@ -58,7 +71,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "aquiremnts",
+                "query": "",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -115,7 +128,7 @@
               "state": {
                 "file": "Handshake.md",
                 "linksCollapsed": false,
-                "unlinkedCollapsed": true
+                "unlinkedCollapsed": false
               }
             }
           },
@@ -140,12 +153,12 @@
               }
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -158,8 +171,11 @@
       "markdown-importer:Open format converter": false
     }
   },
-  "active": "eb6772f947eed732",
+  "active": "8693799739eb1f18",
   "lastOpenFiles": [
-    "Handshake.md"
+    "templates",
+    "Handshake.md",
+    "RTMP.md",
+    "Reading The Chunk Head.md"
   ]
 }

@@ -8,6 +8,7 @@ The client sends the following data:
 ### *C0* 
 	1 byte
 This is The Version (in our case always "3") and looks as the following: 
+#Packet-Diagram
 ```
  0 1 2 3 4 5 6 7
  +-+-+-+-+-+-+-+-+
@@ -19,6 +20,7 @@ This is The Version (in our case always "3") and looks as the following:
 ### *C1*
 	1536 octets long
 This is the timestamp packet of the client, it also includes some extra fields that are as follows:
+#Packet-Diagram
 ```
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -48,6 +50,7 @@ The Server starts by reading the two packet from [Client Part 1](#Client%20Part%
 ### *S0* 
 	1 byte
 The S0 packet should be the exact same as the [C0 Packet](#C0). *However if it does not look the same the server should not accept the connection!* 
+#Packet-Diagram
 ```
  0 1 2 3 4 5 6 7
  +-+-+-+-+-+-+-+-+
@@ -59,6 +62,7 @@ The S0 packet should be the exact same as the [C0 Packet](#C0). *However if it d
 ### *S1*
 	1536 octets long
 This should be similar to the [C1 packet](#C1) in structure, but contain the timestamp of the server instead.
+#Packet-Diagram
 ```
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -77,9 +81,26 @@ This should be similar to the [C1 packet](#C1) in structure, but contain the tim
 	                         S1 bits
 ```
 
-## *S2*
+## *S2 and C2*
 	1536 octets long
-The server **MUST** have the [C1 Packet](#C1) from the client in order to make this packet
+The Server **MUST** have the [C1 Packet](#C1) from the Client in order to make this packet and the Client **MUST** have the [S1 Packet](#S1) from the Server. The Server receives the **C2 Packet** and checks its content if it matches the content of the [S1 Packet](#S1)
+#Packet-Diagram
+```
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                        time (4 bytes)                         |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                       time2 (4 bytes)                         |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                         random echo                           |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                         random echo                           |
+ |                            (cont)                             |
+ |                             ....                              |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+                          C2 and S2 bits
+```
 
-## Client and Server Part 2
+Back to [[RTMP]] 
