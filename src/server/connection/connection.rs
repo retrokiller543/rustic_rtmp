@@ -31,9 +31,6 @@ C0 and S0 bits
                         C1 and S1 bits
 
 */
-
-use std::sync::{ Arc, Mutex };
-
 /*
 
 0                   1                   2                   3
@@ -62,28 +59,13 @@ use crate::server::connection::message::message::{
     RtmpMessage,
 };
 use crate::server::connection::define::msg_type_id;
-use bytes::BytesMut;
-use bytesio::bytes_reader::BytesReader;
-use bytesio::bytesio::BytesIO;
 use rand::Rng;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt };
 use tokio::net::TcpStream;
 
-const MESSAGE_TYPE_CONNECT: u8 = 2;
-
-enum ServerSessionState {
-    Handshake,
-    ReadChunk,
-    OnConnect,
-    OnCreateStream,
-    Publish,
-    DeleteStream,
-    Play,
-}
 
 pub struct Connection {
     stream: TcpStream,
-    state: ServerSessionState,
 }
 
 #[warn(unreachable_code)]
@@ -91,7 +73,6 @@ impl Connection {
     pub fn new(stream: TcpStream) -> Connection {
         Connection {
             stream,
-            state: ServerSessionState::Handshake,
         }
     }
 
@@ -231,9 +212,13 @@ impl Connection {
         // and then parsing the rest of the data based on that type.
 
         println!("Parsing message: {:?}", data);
+        if data.len() < 1 {
+            return Err("No message to read".into());
+        }
 
         let header = ChunkBasicHeader::new(&data[0]);
         println!("fmt: {}, cs: {}", header.fmt, header.cs);
+        let mut marker = 0;
         match ChunkFmt::from_u8(header.fmt) 
         {
             Some(ChunkFmt::Type0) => 
@@ -242,9 +227,53 @@ impl Connection {
                 match chunk_message_header.message_type_id {
                     Some(msg_type_id::SET_CHUNK_SIZE) => {
                         println!("Message type: Set Chunk Size");
-                        let mut tmp = &data[12..16];
                         let chunk_size = Self::read_set_chunk(&data[12..16])?;
                         println!("chunk_size: {}", chunk_size);
+                        marker = 16;
+                    }
+                    Some(msg_type_id::ABORT) => {
+                        println!("Message type: Abort");
+                    }
+                    Some(msg_type_id::ACKNOWLEDGEMENT) => {
+                        println!("Message type: Acknowledgement");
+                    }
+                    Some(msg_type_id::USER_CONTROL_EVENT) => {
+                        println!("Message type: User Control");
+                    }
+                    Some(msg_type_id::WIN_ACKNOWLEDGEMENT_SIZE) => {
+                        println!("Message type: Window Acknowledgement Size");
+                    }
+                    Some(msg_type_id::SET_PEER_BANDWIDTH) => {
+                        println!("Message type: Set Peer Bandwidth");
+                    }
+                    Some(msg_type_id::AUDIO) => {
+                        println!("Message type: Audio");
+                    }
+                    Some(msg_type_id::VIDEO) => {
+                        println!("Message type: Video");
+                    }
+                    Some(msg_type_id::COMMAND_AMF3) => {
+                        println!("Message type: Command AMF3");
+                    }
+                    Some(msg_type_id::DATA_AMF3) => {
+                        println!("Message type: Data AMF3");
+                    }
+                    Some(msg_type_id::SHARED_OBJ_AMF3) => {
+                        println!("Message type: Shared Object AMF3");
+                    }
+                    Some(msg_type_id::DATA_AMF0) => {
+                        println!("Message type: Data AMF0");
+                    }
+                    Some(msg_type_id::SHARED_OBJ_AMF0) => {
+                        println!("Message type: Shared Object AMF0");
+                    }
+                    Some(msg_type_id::AGGREGATE) => {
+                        println!("Message type: Aggregate");
+                    }
+                    Some(msg_type_id::COMMAND_AMF0) => {
+                        println!("Message type: Command AMF0");
+                        let message = ConnectMessage::parse(&data[12..])?;
+                        return Ok(RtmpMessage::Connect(message));
                     }
                     _ => {
                         println!("Message type: Unknown");
@@ -253,7 +282,16 @@ impl Connection {
             }
             Some(ChunkFmt::Type1) => 
             {
-                let chunk_message_header = ChunkMessageHeader::type1(&data[1..12]);
+                let _chunk_message_header = ChunkMessageHeader::type1(&data[1..12]);
+                marker = 12;
+            }
+            Some(ChunkFmt::Type2) => 
+            {
+               println!("Message type: Type2");
+            }
+            Some(ChunkFmt::Type3) => 
+            {
+                println!("Message type: Type3");
             }
             _ => 
             {
@@ -261,13 +299,20 @@ impl Connection {
             }
         }
 
-        let message_body = &data[28..];
-
-        if header.cs == MESSAGE_TYPE_CONNECT {
-            // Parse the data into a ConnectMessage and return it.
-            let message = ConnectMessage::parse(message_body)?;
-            return Ok(RtmpMessage::Connect(message));
+        println!("marker: {}", marker);
+        // check for more msg types
+        if &data[marker] != &0 {
+            let message = Self::parse_message(&data[marker..])?;
+            return Ok(message);
         }
+
+        //let message_body = &data[28..];
+
+        //if header.cs == MESSAGE_TYPE_CONNECT {
+            // Parse the data into a ConnectMessage and return it.
+            //let message = ConnectMessage::parse(message_body)?;
+            //return Ok(RtmpMessage::Connect(message));
+        //}
 
         // Add similar code for other message types.
 
@@ -387,7 +432,7 @@ impl ChunkMessageHeader {
         chunk_message_header
     }
 
-    fn type2(bytes: &[u8]) -> ChunkMessageHeader {
+    fn _type2(bytes: &[u8]) -> ChunkMessageHeader {
         let mut chunk_message_header = ChunkMessageHeader::default();
 
         chunk_message_header.timestamp_delta = Some(u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]));

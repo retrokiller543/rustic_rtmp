@@ -77,13 +77,11 @@ impl Amf0Reader {
     pub fn read_number(&mut self) -> Result<Amf0ValueType, Amf0ReadError> {
         let number = self.reader.read_f64::<BigEndian>()?;
         let value = Amf0ValueType::Number(number);
-        println!("read_number: {:?}", value);
         Ok(value)
     }
 
     pub fn read_bool(&mut self) -> Result<Amf0ValueType, Amf0ReadError> {
         let value = self.reader.read_u8()?;
-        println!("read_bool: {:?}", value);
         match value {
             1 => Ok(Amf0ValueType::Boolean(true)),
             _ => Ok(Amf0ValueType::Boolean(false)),
@@ -101,12 +99,10 @@ impl Amf0Reader {
 
     pub fn read_string(&mut self) -> Result<Amf0ValueType, Amf0ReadError> {
         let raw_string = self.read_raw_string()?;
-        println!("raw_string: {:?}", raw_string);
         Ok(Amf0ValueType::UTF8String(raw_string))
     }
 
     pub fn read_null(&mut self) -> Result<Amf0ValueType, Amf0ReadError> {
-        println!("read_null");
         Ok(Amf0ValueType::Null)
     }
 
@@ -132,8 +128,6 @@ impl Amf0Reader {
             let key = self.read_raw_string()?;
             let val = self.read_any()?;
 
-            println!("key: {:?}, val: {:?}", key, val);
-
             properties.insert(key, val);
         }
 
@@ -150,9 +144,7 @@ impl Amf0Reader {
         while !self.is_read_object_eof()? {
             let key = self.read_raw_string()?;
             let val = self.read_any()?;
-            println!("Ecma array: key: {:?}, val: {:?}", key, val);
             properties.insert(key, val);
-            
         }
 
         if len != properties.len() as u32 {
@@ -168,7 +160,6 @@ impl Amf0Reader {
         let buff = self.reader.read_bytes(l as usize)?;
 
         let val = String::from_utf8(buff.to_vec())?;
-        println!("read_long_string: {:?}", val);
         Ok(Amf0ValueType::LongUTF8String(val))
     }
 }

@@ -8,6 +8,7 @@
 		"rust-analyzer.linkedProjects": [
 			"./Cargo.toml",
 		],
-		"rust-analyzer.showUnlinkedFileNotification": false
+		"rust-analyzer.showUnlinkedFileNotification": false,
+		"obsidianmd.vaultPath": "/mnt/General_Data/Dev/Rust/rustic_rtmp/Rustic_RTMP"
 	}
 }
