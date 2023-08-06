@@ -5,7 +5,7 @@ use crate::server::server::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let server = Server::new("127.0.0.1:1935".to_owned());
+    let server = Server::new("0.0.0.0:1935".to_owned());
     server.run().await?;
     Ok(())
 }

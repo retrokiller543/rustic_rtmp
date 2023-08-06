@@ -83,6 +83,7 @@ impl Connection {
         // Handle RTMP messages.
         // ...
         loop {
+           println!("Listening for msg");
             let message = self.read_message().await?;
 
             match message {
