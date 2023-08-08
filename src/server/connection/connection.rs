@@ -12,8 +12,6 @@
 C0 and S0 bits
 */
 
-use crate::server::connection::message::amf0::amf0_reader::Amf0Reader;
-use crate::server::connection::message::amf0::define::Amf0ValueType;
 /*
 
 0                   1                   2                   3
@@ -68,8 +66,6 @@ use crate::server::connection::message::message::{
 };
 use crate::server::connection::define::msg_type_id;
 
-use bytes::BytesMut;
-use bytesio::bytes_reader::BytesReader;
 use rand::Rng;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt };
 use tokio::net::TcpStream;
