@@ -14,7 +14,9 @@ use bytes::BytesMut;
 use bytesio::bytes_reader::BytesReader;
 use indexmap::IndexMap;
 
-use crate::server::connection::message::amf0::{amf0_reader::Amf0Reader, define::Amf0ValueType};
+use crate::server::connection::message::amf0::{amf0_reader::Amf0Reader, define::Amf0ValueType, amf0_writer::Amf0Writer};
+
+use super::amf0::errors::{Amf0ReadError, Amf0WriteError};
 
 #[derive(Debug)]
 pub enum RtmpMessage {
@@ -22,7 +24,81 @@ pub enum RtmpMessage {
     _CreateStream(CreateStreamMessage),
     _Play(PlayMessage),
     _Pause(PauseMessage),
+    ResultObject(ResultObject),
+    SetChunkSize(SetChunkSizeMessage),
+    Acknowledgement(AcknowledgementMessage),
     // Add other message types as needed
+}
+
+#[derive(Debug)]
+pub struct AcknowledgementMessage {
+    pub sequence_number: u32,
+}
+
+impl AcknowledgementMessage {
+    pub fn new(sequence_number: u32) -> AcknowledgementMessage {
+        AcknowledgementMessage {
+            sequence_number: sequence_number,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SetChunkSizeMessage {
+    pub chunk_size: u32,
+}
+
+impl SetChunkSizeMessage {
+    pub fn new(chunk_size: u32) -> SetChunkSizeMessage {
+        SetChunkSizeMessage { chunk_size: chunk_size }
+    }
+}
+
+#[derive(Debug)]
+pub struct ResultObject {
+    pub command_name: String,
+    pub transaction_id: usize,
+    pub command_object: CommandObject,
+    pub stream_id: usize,
+}
+
+impl ResultObject {
+    pub fn new(command_name: String, transaction_id: usize, command_object: CommandObject, stream_id: usize) -> ResultObject {
+        ResultObject {
+            command_name: command_name,
+            transaction_id: transaction_id,
+            command_object: command_object,
+            stream_id: stream_id,
+        }
+    }
+
+    pub fn parse(&self) -> Result<BytesMut, Amf0WriteError> {
+        let mut writer = Amf0Writer::new(bytesio::bytes_writer::BytesWriter::new());
+        writer.write_any(&Amf0ValueType::UTF8String(self.command_name.clone())).unwrap();
+        writer.write_any(&Amf0ValueType::Number(self.transaction_id as f64)).unwrap();
+        let mut command_obj_map = IndexMap::new();
+        command_obj_map.insert("fmsVer".to_string(), Amf0ValueType::UTF8String(self.command_object.fms_ver.clone()));
+        command_obj_map.insert("capabilities".to_string(), Amf0ValueType::Number(self.command_object.capabilities as f64));
+        writer.write_any(&Amf0ValueType::Object(command_obj_map)).unwrap();
+        let tmp = writer.extract_current_bytes();
+        Ok(tmp)
+    }
+}
+
+#[derive(Debug)]
+pub struct CommandObject {
+    fms_ver: String,
+    capabilities: usize,
+}
+
+impl CommandObject {
+    pub fn new(fms_ver: String, capabilities: usize) -> CommandObject {
+        let command_object = CommandObject {
+            fms_ver: fms_ver,
+            capabilities: capabilities,
+        };
+        command_object
+    }
 }
 
 #[derive(Debug)]

@@ -57,12 +57,19 @@ use crate::server::connection::message::message::{
     PauseMessage,
     PlayMessage,
     RtmpMessage,
+    CommandObject,
+    ResultObject,
+    SetChunkSizeMessage,
+    AcknowledgementMessage,
 };
 use crate::server::connection::define::msg_type_id;
+
 use rand::Rng;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt };
 use tokio::net::TcpStream;
 
+pub const WINDOW_ACKNOWLEDGEMENT_SIZE: u32 = 4096;
+pub const SET_BANDWIDTH_SIZE: u32 = 4096;
 
 pub struct Connection {
     stream: TcpStream,
@@ -98,6 +105,9 @@ impl Connection {
                 }
                 RtmpMessage::_Pause(pause_message) => {
                     self.handle_pause(pause_message).await?;
+                }
+                _ => {
+                    println!("Unhandled message: {:?}", message);
                 }
             }
         }
@@ -157,12 +167,83 @@ impl Connection {
         Ok(())
     }
 
+    pub fn write_header(&mut self, msg_type_id: u8, msg_len: u32, timestamp: u32, stream_id: u32, chunk_basic_header: u8) -> [u8; 12] {
+        pub fn insert_bytes(dst: &mut[u8; 12], data: u32, start_idx: usize, end_idx: usize)
+        {
+            let data_as_bytes = data.to_be_bytes();
+
+            let mut i: usize = 0;
+            if end_idx - start_idx == 3
+            {
+                i = 1;
+            }
+
+            for idx in start_idx..end_idx
+            {
+                dst[idx] = data_as_bytes[i];
+                i += 1;
+            } 
+        }
+        
+        let mut header = [0; 12];
+        header[0] = chunk_basic_header;
+        insert_bytes(&mut header, timestamp, 1, 4);
+        insert_bytes(&mut header, msg_len, 4, 7);
+        header[7] = msg_type_id;
+        insert_bytes(&mut header, stream_id, 8, 12);
+        
+        println!("header: {:?}", header);
+        header
+    }
+
     async fn handle_connect(
         &mut self,
         msg: ConnectMessage
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a Connect message.
         // ...
+        // TODO: Handle connect message
+        // send win ack size
+        // connect to app
+        // send set peer bandwidth
+        // read ack
+        // make and send StreamBegin
+        // make and send _result
+
+        let ack_header = self.write_header(5, 4, 0, 0, 2);       
+        let mut ack_msg: [u8; 16] = [0; 16];
+
+        ack_msg[0..12].copy_from_slice(&ack_header);
+        ack_msg[12..16].copy_from_slice(&WINDOW_ACKNOWLEDGEMENT_SIZE.to_be_bytes());
+        self.stream.write_all(&ack_msg).await?;
+
+        let bandwidth_header = self.write_header(6, 5, 0, 0, 2);
+        let mut bandwidth_msg: [u8; 17] = [0; 17];
+
+        bandwidth_msg[0..12].copy_from_slice(&bandwidth_header);
+
+        let bandwidth_as_bytes = SET_BANDWIDTH_SIZE.to_be_bytes();
+
+        bandwidth_msg[12..16].copy_from_slice(&bandwidth_as_bytes);
+        bandwidth_msg[16] = 2;
+        let e = CommandObject::new("FMS/3,0,1,123".to_string(), 31);
+        let result_obj = ResultObject::new("_result".to_string(), 1, e, 0);
+        let command = result_obj.parse()?;
+        let command_vec: Vec<u8> = command.freeze().to_vec();
+        
+        let command_header = self.write_header(20, command_vec.len() as u32, 0, 0, 2);
+        let mut command_msg = Vec::new();
+        command_msg.extend_from_slice(&command_header);
+        command_msg.extend_from_slice(&command_vec);
+        
+        let mut set_peer_bandwidth  = Vec::new();
+        set_peer_bandwidth.extend_from_slice(&bandwidth_msg);
+        set_peer_bandwidth.extend_from_slice(&command_msg);
+        println!("set peer bandwidth: {:?}", set_peer_bandwidth);
+        self.stream.write_all(&set_peer_bandwidth).await?;
+
+        self.read_message().await?;
+        
         println!("Connect message: {:?}", msg);
 
         Ok(())
@@ -200,91 +281,39 @@ impl Connection {
         let size = self.stream.read(&mut buffer).await?;
         // println!("Read {} bytes", size);
 
+        let mut marker: usize = 0;
         // Parse the data into an RtmpMessage.
-        let message = Self::parse_message(&buffer[0..size])?;
+        let message = Self::parse_message(&self, &buffer[0..size], &mut marker)?;
 
         Ok(message)
     }
 
-    // This is a placeholder function for parsing a message from the client.
-    fn parse_message(data: &[u8]) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
-        // Parse the data into an RtmpMessage.
-        // This will involve examining the data to determine the type of the message,
-        // and then parsing the rest of the data based on that type.
-
-        println!("Parsing message: {:?}", data);
+    pub fn parse_msg_header(&self, data: &[u8], marker: &mut usize) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+        println!("Parsing message header: {:?}", data);
         if data.len() < 1 {
             return Err("No message to read".into());
         }
 
-        let header = ChunkBasicHeader::new(&data[0]);
-        println!("fmt: {}, cs: {}", header.fmt, header.cs);
-        let mut marker = 0;
+        let basic_header = ChunkBasicHeader::new(&data[0]);
+        println!("fmt: {}, cs: {}", basic_header.fmt, basic_header.cs);
+        let msg = Connection::read_header_types(&self, &data, marker, basic_header)?;
+        Ok(msg)
+    }
+
+    pub fn read_header_types(&self, data: &[u8], marker: &mut usize, header: ChunkBasicHeader) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         match ChunkFmt::from_u8(header.fmt) 
         {
             Some(ChunkFmt::Type0) => 
             {
                 let chunk_message_header = ChunkMessageHeader::type0(&data[1..12]);
-                match chunk_message_header.message_type_id {
-                    Some(msg_type_id::SET_CHUNK_SIZE) => {
-                        println!("Message type: Set Chunk Size");
-                        let chunk_size = Self::read_set_chunk(&data[12..16])?;
-                        println!("chunk_size: {}", chunk_size);
-                        marker = 16;
-                    }
-                    Some(msg_type_id::ABORT) => {
-                        println!("Message type: Abort");
-                    }
-                    Some(msg_type_id::ACKNOWLEDGEMENT) => {
-                        println!("Message type: Acknowledgement");
-                    }
-                    Some(msg_type_id::USER_CONTROL_EVENT) => {
-                        println!("Message type: User Control");
-                    }
-                    Some(msg_type_id::WIN_ACKNOWLEDGEMENT_SIZE) => {
-                        println!("Message type: Window Acknowledgement Size");
-                    }
-                    Some(msg_type_id::SET_PEER_BANDWIDTH) => {
-                        println!("Message type: Set Peer Bandwidth");
-                    }
-                    Some(msg_type_id::AUDIO) => {
-                        println!("Message type: Audio");
-                    }
-                    Some(msg_type_id::VIDEO) => {
-                        println!("Message type: Video");
-                    }
-                    Some(msg_type_id::COMMAND_AMF3) => {
-                        println!("Message type: Command AMF3");
-                    }
-                    Some(msg_type_id::DATA_AMF3) => {
-                        println!("Message type: Data AMF3");
-                    }
-                    Some(msg_type_id::SHARED_OBJ_AMF3) => {
-                        println!("Message type: Shared Object AMF3");
-                    }
-                    Some(msg_type_id::DATA_AMF0) => {
-                        println!("Message type: Data AMF0");
-                    }
-                    Some(msg_type_id::SHARED_OBJ_AMF0) => {
-                        println!("Message type: Shared Object AMF0");
-                    }
-                    Some(msg_type_id::AGGREGATE) => {
-                        println!("Message type: Aggregate");
-                    }
-                    Some(msg_type_id::COMMAND_AMF0) => {
-                        println!("Message type: Command AMF0");
-                        let message = ConnectMessage::parse(&data[12..])?;
-                        return Ok(RtmpMessage::Connect(message));
-                    }
-                    _ => {
-                        println!("Message type: Unknown");
-                    }
-                }
+                let msg = Connection::read_msg_type(&data[12..], marker, chunk_message_header);
+                return msg;
             }
             Some(ChunkFmt::Type1) => 
             {
-                let _chunk_message_header = ChunkMessageHeader::type1(&data[1..12]);
-                marker = 12;
+                let chunk_message_header = ChunkMessageHeader::type1(&data[1..8]);
+                let msg = Connection::read_msg_type(&data[8..], marker, chunk_message_header);
+                return msg;
             }
             Some(ChunkFmt::Type2) => 
             {
@@ -300,31 +329,103 @@ impl Connection {
             }
         }
 
-        println!("marker: {}", marker);
-        // check for more msg types
-        if &data[marker] != &0 {
-            let message = Self::parse_message(&data[marker..])?;
-            return Ok(message);
+        Err("Unknown chunk format".into())
+    }
+
+    pub fn read_msg_type(data: &[u8], marker: &mut usize, msg_header: ChunkMessageHeader) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+        match msg_header.message_type_id {
+            Some(msg_type_id::SET_CHUNK_SIZE) => {
+                println!("Message type: Set Chunk Size");
+                let chunk_size = Self::read_set_chunk(&data[12..16])?;
+                println!("chunk_size: {}", chunk_size);
+                *marker = 16;
+                let set_chunk_size = SetChunkSizeMessage::new(chunk_size);
+                return Ok(RtmpMessage::SetChunkSize(set_chunk_size));
+            }
+            Some(msg_type_id::ABORT) => {
+                println!("Message type: Abort");
+            }
+            Some(msg_type_id::ACKNOWLEDGEMENT) => {
+                println!("Message type: Acknowledgement");
+                *marker = 12;
+                let ack_sequence_number = Self::read_ack(&data[8..13])?;
+                let ack = AcknowledgementMessage::new(ack_sequence_number);
+                return Ok(RtmpMessage::Acknowledgement(ack));
+            }
+            Some(msg_type_id::USER_CONTROL_EVENT) => {
+                println!("Message type: User Control");
+            }
+            Some(msg_type_id::WIN_ACKNOWLEDGEMENT_SIZE) => {
+                println!("Message type: Window Acknowledgement Size");
+            }
+            Some(msg_type_id::SET_PEER_BANDWIDTH) => {
+                println!("Message type: Set Peer Bandwidth");
+            }
+            Some(msg_type_id::AUDIO) => {
+                println!("Message type: Audio");
+            }
+            Some(msg_type_id::VIDEO) => {
+                println!("Message type: Video");
+            }
+            Some(msg_type_id::COMMAND_AMF3) => {
+                println!("Message type: Command AMF3");
+            }
+            Some(msg_type_id::DATA_AMF3) => {
+                println!("Message type: Data AMF3");
+            }
+            Some(msg_type_id::SHARED_OBJ_AMF3) => {
+                println!("Message type: Shared Object AMF3");
+            }
+            Some(msg_type_id::DATA_AMF0) => {
+                println!("Message type: Data AMF0");
+            }
+            Some(msg_type_id::SHARED_OBJ_AMF0) => {
+                println!("Message type: Shared Object AMF0");
+            }
+            Some(msg_type_id::AGGREGATE) => {
+                println!("Message type: Aggregate");
+            }
+            Some(msg_type_id::COMMAND_AMF0) => {
+                println!("Message type: Command AMF0");
+                println!("marker: {}", marker);
+                println!("data: {:?}", &data[*marker..]);
+                let message = ConnectMessage::parse(&data[12..])?;
+                return Ok(RtmpMessage::Connect(message));
+            }
+            _ => {
+                println!("Message type: Unknown");
+            }
         }
 
-        //let message_body = &data[28..];
-
-        //if header.cs == MESSAGE_TYPE_CONNECT {
-            // Parse the data into a ConnectMessage and return it.
-            //let message = ConnectMessage::parse(message_body)?;
-            //return Ok(RtmpMessage::Connect(message));
-        //}
-
-        // Add similar code for other message types.
-
-        // If the data does not match any known message type, return an error.
         Err("Unknown message type".into())
+    }
+
+    fn parse_message(&self, data: &[u8], marker: &mut usize) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+        println!("Message marker: {:?}", marker);
+
+        let msg = Connection::parse_msg_header(&self, &data, marker)?;
+    
+        println!("marker: {}", marker);
+        // check for more msg types
+        if *marker < data.len() &&  &data[*marker] != &0 {
+            println!("more msg types");
+            let message = Self::parse_message(&self, &data, marker)?;
+            return Ok(message);
+        }
+    
+        Ok(msg)
     }
 
     fn read_set_chunk(data: &[u8]) -> Result<u32, Box<dyn std::error::Error>> {
         let tmp_data = (data[0] << 1) >> 1;
         let chunk_size = u32::from_be_bytes([tmp_data, data[1], data[2], data[3]]);
         Ok(chunk_size)
+    }
+
+    fn read_ack(data: &[u8]) -> Result<u32, Box<dyn std::error::Error>> {
+        let tmp_data = (data[0] << 1) >> 1;
+        let ack = u32::from_be_bytes([tmp_data, data[1], data[2], data[3]]);
+        Ok(ack)
     }
 }
 
@@ -348,7 +449,7 @@ impl ChunkFmt {
 }
 
 #[derive(Debug)]
-struct ChunkBasicHeader {
+pub struct ChunkBasicHeader {
     fmt: u8,
     cs: u8,
 }
@@ -363,7 +464,7 @@ impl ChunkBasicHeader {
     }
 }
 
-struct ChunkMessageHeader {
+pub struct ChunkMessageHeader {
     timestamp: Option<u32>,
     timestamp_delta: Option<u32>,
     message_length: Option<u32>,

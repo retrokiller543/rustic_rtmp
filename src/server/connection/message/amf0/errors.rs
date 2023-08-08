@@ -51,6 +51,10 @@ pub enum Amf0WriteErrorValue {
     BytesWriteError(BytesWriteError),
 }
 
+impl std::error::Error for Amf0WriteError {
+    
+}
+
 #[derive(Debug)]
 pub struct Amf0WriteError {
     pub value: Amf0WriteErrorValue,
@@ -95,7 +99,7 @@ impl fmt::Display for Amf0WriteError {
         fmt::Display::fmt(&self.value, f)
     }
 }
-
+/*
 impl Fail for Amf0WriteError {
     fn cause(&self) -> Option<&dyn Fail> {
         self.value.cause()
@@ -105,3 +109,4 @@ impl Fail for Amf0WriteError {
         self.value.backtrace()
     }
 }
+ */
