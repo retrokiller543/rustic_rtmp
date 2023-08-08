@@ -5,6 +5,7 @@ use {
         fmt, {io, string},
     },
 };
+use log::error;
 
 #[derive(Debug, Fail)]
 pub enum Amf0ReadErrorValue {
@@ -25,6 +26,7 @@ pub struct Amf0ReadError {
 
 impl From<string::FromUtf8Error> for Amf0ReadError {
     fn from(error: string::FromUtf8Error) -> Self {
+        error!("string parse error: {}", error);
         Amf0ReadError {
             value: Amf0ReadErrorValue::StringParseError(error),
         }
@@ -33,6 +35,7 @@ impl From<string::FromUtf8Error> for Amf0ReadError {
 
 impl From<BytesReadError> for Amf0ReadError {
     fn from(error: BytesReadError) -> Self {
+        error!("bytes read error: {}", error);
         Amf0ReadError {
             value: Amf0ReadErrorValue::BytesReadError(error),
         }
@@ -62,6 +65,7 @@ pub struct Amf0WriteError {
 
 impl From<io::Error> for Amf0WriteError {
     fn from(error: io::Error) -> Self {
+        error!("io error: {}", error);
         Amf0WriteError {
             value: Amf0WriteErrorValue::BufferWriteError(error),
         }
@@ -70,6 +74,7 @@ impl From<io::Error> for Amf0WriteError {
 
 impl From<BytesWriteError> for Amf0WriteError {
     fn from(error: BytesWriteError) -> Self {
+        error!("bytes write error: {}", error);
         Amf0WriteError {
             value: Amf0WriteErrorValue::BytesWriteError(error),
         }

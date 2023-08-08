@@ -17,6 +17,7 @@ use indexmap::IndexMap;
 use crate::server::connection::message::amf0::{amf0_reader::Amf0Reader, define::Amf0ValueType, amf0_writer::Amf0Writer};
 
 use super::amf0::errors::{Amf0ReadError, Amf0WriteError};
+use log::info;
 
 #[derive(Debug)]
 pub enum RtmpMessage {
@@ -201,7 +202,7 @@ impl ConnectMessage {
         let decoded_obj = match decoded_msg.get(2) {
         Some(&Amf0ValueType::Object(ref obj)) => obj,
         _ => {
-            println!("Failed to get command object from decoded message: {:?}", decoded_msg);
+            info!("Failed to get command object from decoded message: {:?}", decoded_msg);
             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command object")))
         }
     };

@@ -6,6 +6,7 @@ use crate::server::connection::connection::Connection;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 use tokio::task;
+use log::{info, error};
 
 pub struct Server {
     address: String,
@@ -18,16 +19,16 @@ impl Server {
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(&self.address).await?;
-        println!("Listening on {}", self.address);
+        info!("Listening on {}", self.address);
 
         loop {
             let (stream, _) = listener.accept().await?;
 
             task::spawn_blocking(move || {
                 if let Err(err) = tokio::runtime::Runtime::new().unwrap().block_on(Self::handle_connection(stream)) {
-                    println!("Failed to handle connection: {}", err);
+                    error!("Failed to handle connection: {}", err);
                 } else {
-                    println!("Connection handled successfully");
+                    info!("Connection handled successfully");
                 }
             });
         }
