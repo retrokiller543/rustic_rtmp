@@ -12,6 +12,8 @@
 C0 and S0 bits
 */
 
+use crate::server::connection::message::amf0::amf0_reader::Amf0Reader;
+use crate::server::connection::message::amf0::define::Amf0ValueType;
 /*
 
 0                   1                   2                   3
@@ -61,9 +63,13 @@ use crate::server::connection::message::message::{
     ResultObject,
     SetChunkSizeMessage,
     AcknowledgementMessage,
+    BasicCommand,
+    ReleaseStream
 };
 use crate::server::connection::define::msg_type_id;
 
+use bytes::BytesMut;
+use bytesio::bytes_reader::BytesReader;
 use rand::Rng;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt };
 use tokio::net::TcpStream;
@@ -214,6 +220,7 @@ impl Connection {
         // read ack
         // make and send StreamBegin
         // make and send _result
+        info!("==========Start Connect msg Handle==========");
         info!("Connect message: {:?}", msg);
 
         let ack_header = self.write_header(5, 4, 0, 0, 2);       
@@ -251,6 +258,7 @@ impl Connection {
         self.read_message().await?;
         
 
+        info!("==========End Connect msg Handle==========");
         Ok(())
     }
 
@@ -362,6 +370,7 @@ impl Connection {
                 let ack_sequence_number = Self::read_ack(&data[self.marker..read_to])?;
                 self.marker = read_to;
                 let ack = AcknowledgementMessage::new(ack_sequence_number);
+                info!("ack: {:?}", ack);
                 return Ok(RtmpMessage::Acknowledgement(ack));
             }
             Some(msg_type_id::USER_CONTROL_EVENT) => {
@@ -399,11 +408,26 @@ impl Connection {
             }
             Some(msg_type_id::COMMAND_AMF0) => {
                 info!("Message type: Command AMF0");
-                if msg_header.message_length != None {
-                    let read_to = self.marker + msg_header.message_length.unwrap() as usize;
-                    let message = ConnectMessage::parse(&data[self.marker..read_to])?;
-                    self.marker = read_to;
-                    return Ok(RtmpMessage::Connect(message));
+                if let Some(msg_len) = msg_header.message_length {
+                    let read_to = self.marker + msg_len as usize;
+                    let command_name = BasicCommand::parse(&data[self.marker..read_to])?.command_name;
+                    info!("command_name: {:?}", command_name);
+                    match command_name.as_str() {
+                        "connect" => {
+                            let message = ConnectMessage::parse(&data[self.marker..read_to])?;
+                            self.marker = read_to;
+                            return Ok(RtmpMessage::Connect(message));
+                        }
+                        "releaseStream" => {
+                            let message = ReleaseStream::parse(&data[self.marker..read_to])?;
+                            self.marker = read_to;
+                            return Ok(RtmpMessage::ReleaseStream(message));
+                        }
+                        _ => {
+                            error!("Unknown command: {:?}", command_name);
+                            return Err("Unknown command".into())
+                        }
+                    };
                 }
             }
             _ => {

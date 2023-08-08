@@ -12,7 +12,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .log_to_file(FileSpec::default())
     .write_mode(WriteMode::BufferAndFlush)
     .start()?;
-    let server = Server::new("0.0.0.0:1935".to_owned());
+    let ip = "0.0.0.0";
+    let port = "1935";
+    let addr = format!("{}:{}", ip, port);
+    let server = Server::new(addr.to_owned());
+    println!("Starting server on {}", addr);
     info!("Starting server");
     server.run().await?;
     Ok(())

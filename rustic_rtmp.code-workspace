@@ -9,6 +9,9 @@
 			"./Cargo.toml",
 		],
 		"rust-analyzer.showUnlinkedFileNotification": false,
+		"rust-analyzer.inlayHints.parameterHints.enable": true,
+		"rust-analyzer.inlayHints.closingBraceHints.enable": true,
+		"rust-analyzer.inlayHints.typeHints.enable": true,
 		"obsidianmd.vaultPath": "/mnt/General_Data/Dev/Rust/rustic_rtmp/Rustic_RTMP"
 	}
 }

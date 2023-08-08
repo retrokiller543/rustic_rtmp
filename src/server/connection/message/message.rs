@@ -21,6 +21,7 @@ use log::info;
 
 #[derive(Debug)]
 pub enum RtmpMessage {
+    BasicCommand(BasicCommand),
     Connect(ConnectMessage),
     _CreateStream(CreateStreamMessage),
     _Play(PlayMessage),
@@ -28,7 +29,51 @@ pub enum RtmpMessage {
     ResultObject(ResultObject),
     SetChunkSize(SetChunkSizeMessage),
     Acknowledgement(AcknowledgementMessage),
+    ReleaseStream(ReleaseStream),
     // Add other message types as needed
+}
+
+#[derive(Debug)]
+pub struct ReleaseStream {
+    pub command_name: String,
+    pub transaction_id: usize,
+    pub amf0_null: Amf0ValueType,
+    pub stream_name: String,
+}
+
+impl ReleaseStream {
+    pub fn new(command_name: String, transaction_id: usize, amf0_null: Amf0ValueType, stream_name: String) -> ReleaseStream {
+        ReleaseStream {
+            command_name: command_name,
+            transaction_id: transaction_id,
+            amf0_null: amf0_null,
+            stream_name: stream_name,
+        }
+    }
+
+    pub fn parse(data: &[u8]) -> Result<ReleaseStream, Box<dyn std::error::Error>> {
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let decoded_msg = reader.read_all()?;
+        let command_name = match decoded_msg.get(0) {
+            Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command name"))),
+        };
+        let transaction_id = match decoded_msg.get(1) {
+            Some(Amf0ValueType::Number(transaction_id)) => *transaction_id as usize,
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction id"))),
+        };
+        let amf0_null = match decoded_msg.get(2) {
+            Some(Amf0ValueType::Null) => Amf0ValueType::Null,
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected null"))),
+        };
+        
+        let stream_name = match decoded_msg.get(3) {
+            Some(Amf0ValueType::UTF8String(stream_name)) => stream_name.to_owned(),
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected stream name"))),
+        };
+
+        Ok(ReleaseStream::new(command_name, transaction_id, amf0_null, stream_name))
+    }
 }
 
 #[derive(Debug)]
@@ -170,6 +215,32 @@ impl ConnectObject {
 
 
         Ok(connect_object)
+    }
+}
+
+#[derive(Debug)]
+pub struct BasicCommand {
+    pub command_name: String
+}
+
+impl BasicCommand {
+    pub fn new(command_name: String) -> BasicCommand {
+        BasicCommand {
+            command_name: command_name,
+        }
+    }
+
+    pub fn parse(data: &[u8]) -> Result<BasicCommand, Box<dyn std::error::Error>> {
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+
+        let decoded_msg = reader.read_all()?;
+
+        let command_name = match decoded_msg.get(0) {
+            Some(&Amf0ValueType::UTF8String(ref s)) => s.clone(),
+            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Invalid command name"))),
+        };
+
+        Ok(BasicCommand::new(command_name))
     }
 }
 
