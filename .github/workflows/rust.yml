@@ -62,7 +62,7 @@ jobs:
       with:
         registry: ${{ env.REGISTRY1 }}
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ secrets.SUPER_SECRET_TOKEN }}
   
     - name: Log into Docker Hub
       uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
