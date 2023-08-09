@@ -2,6 +2,11 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
 [![issues - rustic_rtmp](https://img.shields.io/github/issues/Retrokiller543/rustic_rtmp)](https://github.com/Retrokiller543/rustic_rtmp/issues)
 [![Tests](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml) 
+
+[![contributions - welcome](https://img.shields.io/badge/contributions-welcome-blue)](/CONTRIBUTING.md "Go to contributions doc")
+[![OS - Linux](https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white)](https://www.linux.org/ "Go to Linux homepage")
+[![Made with Docker](https://img.shields.io/badge/Made_with-Docker-blue?logo=docker&logoColor=white)](https://www.docker.com/ "Go to Docker homepage")
+[![Made with Rust - 1.73.0-nightly](https://img.shields.io/badge/Rust_Nightly-1.73.0-blue?logo=rust&logoColor=white)](https://www.rust-lang.org/ "Go to Rust homepage")
 # Rustic RTMP
 
 A Rust implementation of the RTMP protocol to handle streaming.
