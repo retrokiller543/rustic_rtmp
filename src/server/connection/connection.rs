@@ -16,6 +16,8 @@ use crate::server::connection::message::message::{
     Event,
     OnStatus,
     SetDataFrame,
+    VideoData,
+    AudioData,
 };
 use crate::server::connection::define::msg_type_id;
 
@@ -66,6 +68,12 @@ impl Connection {
                 }
                 RtmpMessage::Publish(publish_message) => {
                     self.handle_publish(publish_message).await?;
+                }
+                RtmpMessage::AudioData(audio_data) => {
+                    Self::handle_audio_data(audio_data.data)?;
+                }
+                RtmpMessage::VideoData(video_data) => {
+                    Self::handle_video_data(video_data.data)?;
                 }
                 _ => {
                     error!("Unhandled message: {:?}", message);
@@ -270,6 +278,20 @@ impl Connection {
         Ok(())
     }
 
+    fn handle_audio_data(data: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle audio data.
+        // ...
+        info!("Audio data: {:?}", data);
+        Ok(())
+    }
+
+    fn handle_video_data(data: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle video data.
+        // ...
+        info!("Video data: {:?}", data);
+        Ok(())
+    }
+
     async fn read_message(&mut self) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         // Create a buffer to hold the message data.
         let mut buffer = [0; 4096]; // Adjust the size as needed.
@@ -375,9 +397,17 @@ impl Connection {
             }
             Some(msg_type_id::AUDIO) => {
                 info!("Message type: Audio");
+                let read_to = self.marker + msg_header.message_length.unwrap() as usize;
+                let audio_data = AudioData::new(msg_header.message_stream_id.unwrap(), data[self.marker..read_to].to_vec());
+                self.marker = read_to;
+                return Ok(RtmpMessage::AudioData(audio_data));
             }
             Some(msg_type_id::VIDEO) => {
                 info!("Message type: Video");
+                let read_to = self.marker + msg_header.message_length.unwrap() as usize;
+                let video_data = VideoData::new(msg_header.message_stream_id.unwrap(), data[self.marker..read_to].to_vec());
+                self.marker = read_to;
+                return Ok(RtmpMessage::VideoData(video_data));
             }
             Some(msg_type_id::COMMAND_AMF3) => {
                 info!("Message type: Command AMF3");

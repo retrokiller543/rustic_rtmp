@@ -35,7 +35,39 @@ pub enum RtmpMessage {
     Event(Event),
     OnStatus(OnStatus),
     SetDataFrame(SetDataFrame),
+    VideoData(VideoData),
+    AudioData(AudioData),
     // Add other message types as needed
+}
+
+#[derive(Debug)]
+pub struct AudioData {
+    pub stream_id: u32,
+    pub data: Vec<u8>
+}
+
+impl AudioData {
+    pub fn new(stream_id: u32, data: Vec<u8>) -> AudioData {
+        AudioData {
+            stream_id: stream_id,
+            data: data
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct VideoData {
+    pub stream_id: u32,
+    pub data: Vec<u8>
+}
+
+impl VideoData {
+    pub fn new(stream_id: u32, data: Vec<u8>) -> VideoData {
+        VideoData {
+            stream_id: stream_id,
+            data: data
+        }
+    }
 }
 
 #[derive(Debug)]
