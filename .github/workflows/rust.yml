@@ -91,7 +91,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY1 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:latest
+        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder
