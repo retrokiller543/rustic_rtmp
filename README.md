@@ -56,6 +56,5 @@ Released under [MIT](/LICENSE) by [@Retrokiller543](https://github.com/Retrokill
 
 ## Contributing
 
-[![Retrokiller543 - rustic_rtmp](https://img.shields.io/static/v1?label=Retrokiller543&message=rustic_rtmp&color=green&logo=github)](https://github.com/Retrokiller543/rustic_rtmp "Go to GitHub repo")
-[![stars - rustic_rtmp](https://img.shields.io/github/stars/Retrokiller543/rustic_rtmp?style=social)](https://github.com/Retrokiller543/rustic_rtmp)
-[![forks - rustic_rtmp](https://img.shields.io/github/forks/Retrokiller543/rustic_rtmp?style=social)](https://github.com/Retrokiller543/rustic_rtmp)
+[![Retrokiller543](https://img.shields.io/static/v1?label=Retrokiller543&message=Owner&color=green&logo=github)](https://github.com/Retrokiller543 "Go to GitHub Profile")
+[![ghosthookcc](https://img.shields.io/static/v1?label=ghosthookcc&message=Co-Owner&color=green&logo=github)](https://github.com/ghosthookcc "Go to GitHub Profile")
