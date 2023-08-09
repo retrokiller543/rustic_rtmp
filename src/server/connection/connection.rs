@@ -609,18 +609,6 @@ impl ChunkMessageHeader {
     }
 
     fn type1(bytes: &[u8]) -> ChunkMessageHeader {
-        /*
-           0                   1                   2                   3
-           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-           |                timestamp delta                |message length |
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-           |     message length (cont)     |message type id|
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-                   Chunk Message Header - Type 1
-        */
-
         let mut chunk_message_header = ChunkMessageHeader::default();
 
         let timestamp_delta = u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]);
@@ -652,6 +640,7 @@ impl ChunkMessageHeader {
 }
 
 
+#[allow(unused_mut)]
 #[cfg(test)]
 mod tests {
     use super::*;
