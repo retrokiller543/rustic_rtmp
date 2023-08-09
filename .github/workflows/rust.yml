@@ -71,6 +71,11 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
   
+    - name: Setup Docker buildx with a different driver
+      run: |
+        docker buildx create --use --name mybuilder --driver docker-container
+        docker buildx inspect mybuilder --bootstrap
+      
     - name: Build and push to GitHub registry
       uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
       with:
@@ -79,6 +84,8 @@ jobs:
         tags: ${{ env.REGISTRY1 }}/${{ env.IMAGE_NAME }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        builder: mybuilder
+      
   
     - name: Build and push to Docker Hub
       uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
@@ -88,4 +95,5 @@ jobs:
         tags: ${{ env.REGISTRY2 }}/${{ env.IMAGE_NAME }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        builder: mybuilder
 
