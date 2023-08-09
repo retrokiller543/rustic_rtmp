@@ -45,10 +45,10 @@ jobs:
           ${{ runner.os }}-cargo-target-
 
     - name: Build
-      run: cargo build --release --verbose
+      run: cargo build --release
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
 
   docker_build_and_push:
     needs: build_and_test
