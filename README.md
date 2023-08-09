@@ -1,3 +1,4 @@
+[![Tests](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml)
 # Rustic RTMP
 
 A Rust implementation of the RTMP protocol to handle streaming.
