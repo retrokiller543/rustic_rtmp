@@ -75,7 +75,17 @@ jobs:
       run: |
         docker buildx create --use --name mybuilder --driver docker-container
         docker buildx inspect mybuilder --bootstrap
-      
+    
+    - name: Build and push to Docker Hub
+      uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+      with:
+        context: .
+        push: true
+        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}}}/${{ env.IMAGE_NAME }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        builder: mybuilder
+  
     - name: Build and push to GitHub registry
       uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
       with:
@@ -87,13 +97,4 @@ jobs:
         builder: mybuilder
       
   
-    - name: Build and push to Docker Hub
-      uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
-      with:
-        context: .
-        push: true
-        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}}}/${{ env.IMAGE_NAME }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        builder: mybuilder
-
+    
