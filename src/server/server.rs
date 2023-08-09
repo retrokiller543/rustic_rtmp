@@ -20,7 +20,6 @@ impl Server {
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(&self.address).await?;
         info!("Listening on {}", self.address);
-
         loop {
             let (stream, _) = listener.accept().await?;
 
