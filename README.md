@@ -1,4 +1,7 @@
-[![Tests](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml)
+[![GitHub release](https://img.shields.io/github/release/Retrokiller543/rustic_rtmp?include_prereleases=&sort=semver&color=green)](https://github.com/Retrokiller543/rustic_rtmp/releases/)
+[![License](https://img.shields.io/badge/License-MIT-green)](#license)
+[![issues - rustic_rtmp](https://img.shields.io/github/issues/Retrokiller543/rustic_rtmp)](https://github.com/Retrokiller543/rustic_rtmp/issues)
+[![Tests](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/Retrokiller543/rustic_rtmp/actions/workflows/rust.yml) 
 # Rustic RTMP
 
 A Rust implementation of the RTMP protocol to handle streaming.
@@ -28,3 +31,26 @@ RTMP consists of several parts:
 
     Encode/Decode AMF: You'll need to be able to encode and decode AMF data. There might be existing Rust libraries that can do this, or you might need to implement it yourself.
 
+<div align="center">
+
+[![Use this template](https://img.shields.io/badge/Generate-Use_this_template-2ea44f?style=for-the-badge)](https://github.com/Retrokiller543/rustic_rtmp/generate)
+
+</div>
+
+## Documentation
+
+<div align="center">
+
+[![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](/docs/ "Go to project documentation")
+
+</div>
+
+## License
+
+Released under [MIT](/LICENSE) by [@Retrokiller543](https://github.com/Retrokiller543).
+
+## Contributing
+
+[![Retrokiller543 - rustic_rtmp](https://img.shields.io/static/v1?label=Retrokiller543&message=rustic_rtmp&color=green&logo=github)](https://github.com/Retrokiller543/rustic_rtmp "Go to GitHub repo")
+[![stars - rustic_rtmp](https://img.shields.io/github/stars/Retrokiller543/rustic_rtmp?style=social)](https://github.com/Retrokiller543/rustic_rtmp)
+[![forks - rustic_rtmp](https://img.shields.io/github/forks/Retrokiller543/rustic_rtmp?style=social)](https://github.com/Retrokiller543/rustic_rtmp)
