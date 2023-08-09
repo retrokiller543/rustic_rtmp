@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  rustic-rtmp:
+    build:
+      context: .
+      dockerfile: DockerFile
+    image: rustic-rtmp:latest
+    ports:
+      - "1935:1935"
+    restart: unless-stopped
