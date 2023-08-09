@@ -21,7 +21,7 @@ use crate::server::connection::message::message::{
 };
 use crate::server::connection::define::msg_type_id;
 
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use tokio::io::{ AsyncReadExt, AsyncWriteExt };
 use tokio::net::TcpStream;
 use log::{info, error, warn};
@@ -112,7 +112,7 @@ impl Connection {
         let server_timestamp = (0u32).to_be_bytes(); // Server uptime in milliseconds
         s0_s1_s2_buffer[1..5].copy_from_slice(&server_timestamp);
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::StdRng::from_entropy();
         rng.fill(&mut s0_s1_s2_buffer[5..3073]);
         let s1_clone;
         {
@@ -766,5 +766,44 @@ mod tests {
 
         // Check the result
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_connect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("Failed to bind");
+        let server_addr = listener.local_addr().unwrap();
+
+        // Simulate the client
+        tokio::spawn(async move {
+            let mut client_stream = TcpStream::connect(server_addr).await.expect("Failed to connect");
+            let mock_data: &[u8] = &[2, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 16, 0, 3, 0, 0, 0, 0, 0, 179, 20, 0, 0, 0, 0, 2, 0, 7, 99, 111, 110, 110, 101, 99, 116, 0, 63, 240, 0, 0, 0, 0, 0, 0, 3, 0, 3, 97, 112, 112, 2, 0, 4, 108, 105, 118, 101, 0, 4, 116, 121, 112, 101, 2, 0, 10, 110, 111, 110, 112, 114, 105, 118, 97, 116, 101, 0, 8, 102, 108, 97, 115, 104, 86, 101, 114, 2, 0, 31, 70, 77, 76, 69, 47, 51, 46, 48, 32, 40, 99, 111, 109, 112, 97, 116, 105, 98, 108, 101, 59, 32, 70, 77, 83, 99, 47, 49, 46, 48, 41, 0, 6, 115, 119, 102, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 5, 116, 99, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 0, 9]; // Your mock RTMP connect data
+            client_stream.write_all(mock_data).await.expect("Failed to send mock data");
+            
+            // Read server responses, send ack, etc.
+            // ...
+                    // Read server responses
+            let mut response_buffer = [0u8; 4096];
+            client_stream.read(&mut response_buffer).await.expect("Failed to read server response");
+            
+            // TODO: Parse the server's response if necessary and determine if an acknowledgment or other message should be sent.
+
+            // Send acknowledgment or other message
+            let ack_data: &[u8] = &[66, 0, 0, 0, 0, 0, 4, 3, 0, 0, 12, 35]; // Your mock acknowledgment data
+            client_stream.write_all(ack_data).await.expect("Failed to send acknowledgment");
+        });
+
+        // Server handling
+        let (mut server_stream, _) = listener.accept().await.expect("Failed to accept connection");
+        let mut conn = Connection::new(server_stream);
+        let rtmp_message = conn.read_message().await.expect("Failed to read message");
+
+        if let RtmpMessage::Connect(connect_msg) = rtmp_message {
+            conn.handle_connect(connect_msg).await.expect("Failed to handle connect message");
+        } else {
+            println!("Received message: {:?}", rtmp_message);
+            panic!("Expected a ConnectMessage but received a different type");
+        }
+
+        // Add any further assertions or verifications here
     }
 }
