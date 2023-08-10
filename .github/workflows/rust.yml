@@ -1,5 +1,5 @@
 
-name: Rust CI to Docker
+name: Test and Publish
 
 on:
   push:

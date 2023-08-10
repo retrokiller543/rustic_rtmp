@@ -1,6 +1,7 @@
 /target
 .env
 *.log
+/logs
 .gitignore
 /docs
 /.github
