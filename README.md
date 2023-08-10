@@ -46,7 +46,7 @@ RTMP consists of several parts:
 
 <div align="center">
 
-[![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](/wiki "Go to project documentation")
+[![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](https://github.com/retrokiller543/rustic_rtmp/wiki "Go to project documentation")
 
 </div>
 
