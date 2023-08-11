@@ -121,12 +121,17 @@ jobs:
         override: true
   
     - name: Build Rust binary
-      run: cargo build --release
+      run: |
+        cargo build --release
+        ./increment_version.sh
+
   
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GH_PAT }}"
         prerelease: true
+        automatic_release_tag: "v${{ env.NEW_VERSION }}"
+        title: "Release v${{ env.NEW_VERSION }}"
         files: |
           LICENSE.txt
           target/release/rustic_rtmp
