@@ -8,16 +8,20 @@ patch=$(echo $tag | cut -d. -f3)
 
 messages=$(git log $tag..HEAD --pretty=format:%s)
 
-if echo "$messages" | grep -q "^feat:"; then
+major_count=$(echo "$messages" | grep -cE "^(feat|major):")
+minor_count=$(echo "$messages" | grep -cE "^(fix|minor):")
+patch_count=$(echo "$messages" | grep -cE "^(chore|refactor|patch):")
+
+if [[ $major_count -ge $minor_count ]] && [[ $major_count -ge $patch_count ]]; then
   # Increment the major number
   major=$((major + 1))
   minor=0
   patch=0
-elif echo "$messages" | grep -q "^fix:"; then
+elif [[ $minor_count -ge $major_count ]] && [[ $minor_count -ge $patch_count ]]; then
   # Increment the minor number
   minor=$((minor + 1))
   patch=0
-elif echo "$messages" | grep -qE "^(chore|refactor):"; then
+else
   # Increment the patch number
   patch=$((patch + 1))
 fi
