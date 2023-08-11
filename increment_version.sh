@@ -26,4 +26,9 @@ else
   patch=$((patch + 1))
 fi
 
-echo "v$major.$minor.$patch"
+version="$major.$minor.$patch"
+
+# Update the version in Cargo.toml
+sed -i "s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+
+echo $version

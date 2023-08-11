@@ -49,6 +49,11 @@ jobs:
 
     - name: Run tests
       run: cargo test
+    
+    - name: Increment version
+      id: increment_version
+      run: echo "::set-output name=version::$(./increment_version.sh)"
+    
 
   docker_build_and_push:
     needs: build_and_test
@@ -81,7 +86,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:latest
+        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:${{ needs.build_and_test.outputs.version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder
@@ -91,10 +96,33 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:latest
+        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:${{ needs.build_and_test.outputs.version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder
-      
+
+  publish_github_release:
+    needs: docker_build_and_push
+    runs-on: ubuntu-latest
   
-    
+    steps:
+    - uses: actions/checkout@v3
+  
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+  
+    - name: Build Rust binary
+      run: cargo build --release
+  
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        files: |
+          LICENSE.txt
+          target/release/rustic_rtmp
