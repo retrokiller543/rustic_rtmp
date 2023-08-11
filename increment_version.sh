@@ -1,12 +1,19 @@
 #!/bin/bash
-
-tag=$1
+git fetch --tags
+tag=$(git describe --tags --abbrev=0)
 
 major=$(echo $tag | cut -d. -f1)
 minor=$(echo $tag | cut -d. -f2)
 patch=$(echo $tag | cut -d. -f3)
 
 messages=$(git log $tag..HEAD --pretty=format:%s)
+
+versioning_commits=$(echo "$messages" | grep -E "^(feat|major|fix|minor|chore|refactor|patch):")
+
+if [ -z "$versioning_commits" ]; then
+  echo "No versioning commits detected. No version increment needed."
+  exit 0
+fi
 
 major_count=$(echo "$messages" | grep -cE "^(feat|major):")
 minor_count=$(echo "$messages" | grep -cE "^(fix|minor):")
