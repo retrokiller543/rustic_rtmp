@@ -123,6 +123,8 @@ jobs:
     - name: Build Rust binary
       run: |
         cargo build --release
+        chomod +x target/release/rustic_rtmp
+        chmod +x increment_version.sh
         ./increment_version.sh
 
   
