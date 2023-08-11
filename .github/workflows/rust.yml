@@ -126,7 +126,6 @@ jobs:
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GH_PAT }}"
-        automatic_release_tag: "latest"
         prerelease: true
         files: |
           LICENSE.txt
