@@ -10,11 +10,13 @@ We welcome contributions from everyone. Here are some guidelines to help you get
 
 4. **Make Your Changes**: Now you're ready to make your changes! Try to make your changes small, concise, and focused on fixing a specific issue or adding a specific feature.
 
-5. **Commit Your Changes**: After making your changes, commit them with a clear, descriptive message about what you've done. Use the command `git commit -m "Your descriptive commit message"`.
+5. **Test Your Changes**: After making your changes, make sure they work as intended. Run the command `cargo test` to run the test suite and make sure all tests pass.
 
-6. **Push Your Changes**: Push your changes to your forked repository on GitHub. Use the command `git push origin <branch-name>`.
+6. **Commit Your Changes**: After making your changes, commit them with a clear, descriptive message about what you've done. Use the command `git commit -m "Your descriptive commit message"`.
 
-7. **Create a Pull Request**: Finally, navigate to your forked repository on GitHub and click the "New pull request" button. Fill out the pull request template with details about your changes.
+7. **Push Your Changes**: Push your changes to your forked repository on GitHub. Use the command `git push origin <branch-name>`.
+
+8. **Create a Pull Request**: Finally, navigate to your forked repository on GitHub and click the "New pull request" button. Fill out the pull request template with details about your changes.
 
 Please note that by participating in this project, you agree to abide by the code of conduct. The maintainers have the right to remove any contributions that do not align with the project's values or that violate the code of conduct.
 
