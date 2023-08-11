@@ -2,7 +2,7 @@
 git fetch --tags
 tag=$(git describe --tags --abbrev=0)
 
-major=$(echo $tag | cut -d. -f1)
+major=$(echo $tag | cut -d. -f1 | cut -c2-)
 minor=$(echo $tag | cut -d. -f2)
 patch=$(echo $tag | cut -d. -f3)
 
@@ -34,6 +34,8 @@ else
 fi
 
 version="$major.$minor.$patch"
+echo "Current version is $tag"
+echo "New version is $version"
 
 # Update the version in Cargo.toml
 echo "Updating version to $version"
