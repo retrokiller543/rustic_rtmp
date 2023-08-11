@@ -49,6 +49,9 @@ jobs:
 
     - name: Run tests
       run: cargo test
+
+    - name: Set execute permissions for script
+      run: chmod +x ./increment_version.sh
     
     - name: Increment version
       id: increment_version
