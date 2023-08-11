@@ -22,6 +22,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+
     - name: Cache cargo registry
       uses: actions/cache@v2
       with:
@@ -107,7 +114,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:${{ env.NEW_VERSION }}
+        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:${{ secrets.VERSION }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder
@@ -117,7 +124,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:${{ env.NEW_VERSION }}
+        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:${{ secrets.VERSION }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder

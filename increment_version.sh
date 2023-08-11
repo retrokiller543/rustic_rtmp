@@ -1,6 +1,7 @@
 #!/bin/bash
 
 tag=$1
+echo "Tag: $tag"
 
 major=$(echo $tag | cut -d. -f1 | cut -c2-)
 minor=$(echo $tag | cut -d. -f2)
@@ -13,15 +14,18 @@ minor_count=$(echo "$messages" | grep -cE "^(fix|minor):")
 patch_count=$(echo "$messages" | grep -cE "^(chore|refactor|patch):")
 
 if [[ $major_count -ge $minor_count ]] && [[ $major_count -ge $patch_count ]]; then
+  echo "Incrementing major version $major_count $minor_count $patch_count"
   # Increment the major number
   major=$((major + 1))
   minor=0
   patch=0
 elif [[ $minor_count -ge $major_count ]] && [[ $minor_count -ge $patch_count ]]; then
+  echo "Incrementing minor version"
   # Increment the minor number
   minor=$((minor + 1))
   patch=0
 else
+  echo "Incrementing patch version"
   # Increment the patch number
   patch=$((patch + 1))
 fi
