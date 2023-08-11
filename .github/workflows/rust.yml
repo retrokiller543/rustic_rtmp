@@ -12,6 +12,8 @@ env:
   REGISTRY2: docker.io
   CARGO_TERM_COLOR: always
   IMAGE_NAME: "rustic_rtmp"
+  CURRENT_VERSION: ${{secrets.VERSION}}
+  NEW_VERSION: ""
 
 jobs:
   build_and_test:
@@ -50,6 +52,9 @@ jobs:
     - name: Run tests
       run: cargo test
 
+    - name: Install dependencies
+      run: sudo apt-get install -y jq openssl
+    
     - name: Set execute permissions for script
       run: chmod +x ./increment_version.sh
     
@@ -57,6 +62,19 @@ jobs:
       id: increment_version
       run: echo "::set-output name=version::$(./increment_version.sh)"
     
+    - name: Update CURRENT_TAG secret
+      run: |
+        curl -X PUT \
+        -H "Authorization: token ${{ secrets.GH_PAT }}" \
+        -H "Content-Type: application/json" \
+        -d '{"encrypted_value":"$(echo -n "$NEW_TAG" | openssl rsautl -encrypt -pubin -inkey <(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" https://api.github.com/repos/${{github.repository}}/actions/secrets/CURRENT_TAG/public-key | jq -r '.key') | base64)","key_id":"$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" https://api.github.com/repos/${{github.repository}}/actions/secrets/CURRENT_TAG/public-key | jq -r '.key_id')"}' \
+        https://api.github.com/repos/${{github.repository}}/actions/secrets/CURRENT_TAG
+      env:
+        NEW_TAG: ${{ steps.increment_version.outputs.version }}
+
+    - name: Display new version
+      run: echo "The new version is ${{ env.NEW_VERSION }}"
+      
 
   docker_build_and_push:
     needs: build_and_test
@@ -89,7 +107,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:${{ needs.build_and_test.outputs.version }}
+        tags: ${{ env.REGISTRY2 }}/${{secrets.DOCKERHUB_USERNAME}}/${{ env.IMAGE_NAME }}:${{ env.NEW_VERSION }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder
@@ -99,7 +117,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:${{ needs.build_and_test.outputs.version }}
+        tags: ${{ env.REGISTRY1 }}/${{github.actor}}/${{ env.IMAGE_NAME }}:${{ env.NEW_VERSION }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         builder: mybuilder

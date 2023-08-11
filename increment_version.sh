@@ -1,6 +1,6 @@
 #!/bin/bash
 
-tag=$(git describe --tags --abbrev=0)
+tag=$1
 
 major=$(echo $tag | cut -d. -f1 | cut -c2-)
 minor=$(echo $tag | cut -d. -f2)
@@ -31,4 +31,4 @@ version="$major.$minor.$patch"
 # Update the version in Cargo.toml
 sed -i "s/^version = \".*\"/version = \"$version\"/" Cargo.toml
 
-echo $version
+echo "NEW_VERSION=$version" >> $GITHUB_ENV
