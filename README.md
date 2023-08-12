@@ -36,12 +36,6 @@ RTMP consists of several parts:
 
     Encode/Decode AMF: You'll need to be able to encode and decode AMF data. There might be existing Rust libraries that can do this, or you might need to implement it yourself.
 
-<div align="center">
-
-[![Use this template](https://img.shields.io/badge/Generate-Use_this_template-2ea44f?style=for-the-badge)](https://github.com/Retrokiller543/rustic_rtmp/generate)
-
-</div>
-
 ## Documentation
 
 <div align="center">
