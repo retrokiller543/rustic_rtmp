@@ -87,6 +87,10 @@ stable:
 clippy:
 	@cargo clippy --all-targets --all-features -- -D warnings
 
+.PHONY: clippy-fix
+clippy-fix:
+	@cargo clippy --all-targets --all-features --fix -- -D warnings
+
 .PHONY: fmt
 fmt:
 	@cargo fmt
