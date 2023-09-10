@@ -3,10 +3,10 @@
 // Path: src/server.rs
 
 use crate::server::connection::connection::Connection;
+use log::{error, info};
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 use tokio::task;
-use log::{info, error};
 
 pub struct Server {
     address: String,
@@ -24,7 +24,10 @@ impl Server {
             let (stream, _) = listener.accept().await?;
 
             task::spawn_blocking(move || {
-                if let Err(err) = tokio::runtime::Runtime::new().unwrap().block_on(Self::handle_connection(stream)) {
+                if let Err(err) = tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(Self::handle_connection(stream))
+                {
                     error!("Failed to handle connection: {}", err);
                 } else {
                     info!("Connection handled successfully");

@@ -1,3 +1,4 @@
+use log::error;
 use {
     bytesio::bytes_errors::{BytesReadError, BytesWriteError},
     failure::{Backtrace, Fail},
@@ -5,7 +6,6 @@ use {
         fmt, {io, string},
     },
 };
-use log::error;
 
 #[derive(Debug, Fail)]
 pub enum Amf0ReadErrorValue {
@@ -54,9 +54,7 @@ pub enum Amf0WriteErrorValue {
     BytesWriteError(BytesWriteError),
 }
 
-impl std::error::Error for Amf0WriteError {
-    
-}
+impl std::error::Error for Amf0WriteError {}
 
 #[derive(Debug)]
 pub struct Amf0WriteError {

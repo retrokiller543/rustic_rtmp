@@ -14,10 +14,12 @@ use bytes::BytesMut;
 use bytesio::bytes_reader::BytesReader;
 use indexmap::IndexMap;
 
-use crate::server::connection::message::amf0::{amf0_reader::Amf0Reader, define::Amf0ValueType, amf0_writer::Amf0Writer};
+use crate::server::connection::message::amf0::{
+    amf0_reader::Amf0Reader, amf0_writer::Amf0Writer, define::Amf0ValueType,
+};
 
 use super::amf0::errors::{Amf0ReadError, Amf0WriteError};
-use log::{info, error};
+use log::{error, info};
 
 #[derive(Debug)]
 pub enum RtmpMessage {
@@ -43,14 +45,14 @@ pub enum RtmpMessage {
 #[derive(Debug)]
 pub struct AudioData {
     pub stream_id: u32,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 impl AudioData {
     pub fn new(stream_id: u32, data: Vec<u8>) -> AudioData {
         AudioData {
             stream_id: stream_id,
-            data: data
+            data: data,
         }
     }
 }
@@ -58,14 +60,14 @@ impl AudioData {
 #[derive(Debug)]
 pub struct VideoData {
     pub stream_id: u32,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 impl VideoData {
     pub fn new(stream_id: u32, data: Vec<u8>) -> VideoData {
         VideoData {
             stream_id: stream_id,
-            data: data
+            data: data,
         }
     }
 }
@@ -73,14 +75,14 @@ impl VideoData {
 #[derive(Debug)]
 pub struct Event {
     pub event_type: u16,
-    pub stream_id: u32
+    pub stream_id: u32,
 }
 
 impl Event {
     pub fn new(event_type: u16, stream_id: u32) -> Event {
         Event {
             event_type: event_type,
-            stream_id: stream_id
+            stream_id: stream_id,
         }
     }
 
@@ -88,7 +90,7 @@ impl Event {
         let mut buffer: [u8; 6] = [0; 6];
 
         let event_type_as_bytes = self.event_type.to_be_bytes();
-        let stream_id_as_bytes  = self.stream_id.to_be_bytes();
+        let stream_id_as_bytes = self.stream_id.to_be_bytes();
 
         buffer[0..2].copy_from_slice(&event_type_as_bytes);
         buffer[2..].copy_from_slice(&stream_id_as_bytes);
@@ -103,44 +105,81 @@ pub struct Publish {
     pub transaction_id: usize,
     pub amf0_null: Amf0ValueType,
     pub stream_key: String,
-    pub stream_type: String
+    pub stream_type: String,
 }
 
 impl Publish {
-    pub fn new(command_name: String, transaction_id: usize, amf0_null: Amf0ValueType, stream_key: String, stream_type: String) -> Publish {
+    pub fn new(
+        command_name: String,
+        transaction_id: usize,
+        amf0_null: Amf0ValueType,
+        stream_key: String,
+        stream_type: String,
+    ) -> Publish {
         Publish {
             command_name: command_name,
             transaction_id: transaction_id,
             amf0_null: amf0_null,
             stream_key: stream_key,
-            stream_type: stream_type
+            stream_type: stream_type,
         }
     }
-    
+
     pub fn parse(data: &[u8]) -> Result<Publish, Box<dyn std::error::Error>> {
         let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
         let decoded_msg = reader.read_all().unwrap();
         let command_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command name")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected command name",
+                )))
+            }
         };
         let transaction_id = match decoded_msg.get(1) {
             Some(Amf0ValueType::Number(transaction_id)) => *transaction_id,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction id")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected transaction id",
+                )))
+            }
         };
         let amf0_null = match decoded_msg.get(2) {
             Some(Amf0ValueType::Null) => Amf0ValueType::Null,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected null")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected null",
+                )))
+            }
         };
         let stream_key = match decoded_msg.get(3) {
             Some(Amf0ValueType::UTF8String(stream_key)) => stream_key.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected stream key")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected stream key",
+                )))
+            }
         };
         let stream_type = match decoded_msg.get(4) {
             Some(Amf0ValueType::UTF8String(stream_type)) => stream_type.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected stream type")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected stream type",
+                )))
+            }
         };
-        Ok(Publish::new(command_name, transaction_id as usize, amf0_null, stream_key, stream_type))
+        Ok(Publish::new(
+            command_name,
+            transaction_id as usize,
+            amf0_null,
+            stream_key,
+            stream_type,
+        ))
     }
 }
 
@@ -150,40 +189,70 @@ pub struct FCPublish {
     pub transaction_id: usize,
     pub amf0_null: Amf0ValueType,
     pub stream_key: String,
-    pub stream_id: Option<u8>
+    pub stream_id: Option<u8>,
 }
 
 impl FCPublish {
-    pub fn new(command_name: String, transaction_id: usize, amf0_null: Amf0ValueType, stream_key: String) -> FCPublish {
+    pub fn new(
+        command_name: String,
+        transaction_id: usize,
+        amf0_null: Amf0ValueType,
+        stream_key: String,
+    ) -> FCPublish {
         FCPublish {
             command_name: command_name,
             transaction_id: transaction_id,
             amf0_null: amf0_null,
             stream_key: stream_key,
-            stream_id: None
+            stream_id: None,
         }
     }
-    
+
     pub fn parse(data: &[u8]) -> Result<FCPublish, Box<dyn std::error::Error>> {
         let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
         let decoded_msg = reader.read_all().unwrap();
         let command_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command name")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected command name",
+                )))
+            }
         };
         let transaction_id = match decoded_msg.get(1) {
             Some(Amf0ValueType::Number(transaction_id)) => *transaction_id as usize,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction id")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected transaction id",
+                )))
+            }
         };
         let amf0_null = match decoded_msg.get(2) {
             Some(Amf0ValueType::Null) => Amf0ValueType::Null,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected null")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected null",
+                )))
+            }
         };
         let stream_key = match decoded_msg.get(3) {
             Some(Amf0ValueType::UTF8String(stream_key)) => stream_key.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected stream key")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected stream key",
+                )))
+            }
         };
-        Ok(FCPublish::new(command_name, transaction_id, amf0_null, stream_key))
+        Ok(FCPublish::new(
+            command_name,
+            transaction_id,
+            amf0_null,
+            stream_key,
+        ))
     }
 }
 
@@ -196,7 +265,12 @@ pub struct ReleaseStream {
 }
 
 impl ReleaseStream {
-    pub fn new(command_name: String, transaction_id: usize, amf0_null: Amf0ValueType, stream_key: String) -> ReleaseStream {
+    pub fn new(
+        command_name: String,
+        transaction_id: usize,
+        amf0_null: Amf0ValueType,
+        stream_key: String,
+    ) -> ReleaseStream {
         ReleaseStream {
             command_name: command_name,
             transaction_id: transaction_id,
@@ -210,23 +284,48 @@ impl ReleaseStream {
         let decoded_msg = reader.read_all()?;
         let command_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command name"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected command name",
+                )))
+            }
         };
         let transaction_id = match decoded_msg.get(1) {
             Some(Amf0ValueType::Number(transaction_id)) => *transaction_id as usize,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction id"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected transaction id",
+                )))
+            }
         };
         let amf0_null = match decoded_msg.get(2) {
             Some(Amf0ValueType::Null) => Amf0ValueType::Null,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected null"))),
-        };
-        
-        let stream_name = match decoded_msg.get(3) {
-            Some(Amf0ValueType::UTF8String(stream_name)) => stream_name.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected stream name"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected null",
+                )))
+            }
         };
 
-        Ok(ReleaseStream::new(command_name, transaction_id, amf0_null, stream_name))
+        let stream_name = match decoded_msg.get(3) {
+            Some(Amf0ValueType::UTF8String(stream_name)) => stream_name.to_owned(),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected stream name",
+                )))
+            }
+        };
+
+        Ok(ReleaseStream::new(
+            command_name,
+            transaction_id,
+            amf0_null,
+            stream_name,
+        ))
     }
 }
 
@@ -249,33 +348,37 @@ impl OnStatusObject {
     pub fn parse(&self) -> IndexMap<String, Amf0ValueType> {
         let mut writer = Amf0Writer::new(bytesio::bytes_writer::BytesWriter::new());
         let mut obj_map = IndexMap::new();
-        obj_map.insert("level".to_owned(), Amf0ValueType::UTF8String(self.level.to_owned()));
-        obj_map.insert("code".to_owned(), Amf0ValueType::UTF8String(self.code.to_owned()));
-        obj_map.insert("description".to_owned(), Amf0ValueType::UTF8String(self.description.to_owned()));
+        obj_map.insert(
+            "level".to_owned(),
+            Amf0ValueType::UTF8String(self.level.to_owned()),
+        );
+        obj_map.insert(
+            "code".to_owned(),
+            Amf0ValueType::UTF8String(self.code.to_owned()),
+        );
+        obj_map.insert(
+            "description".to_owned(),
+            Amf0ValueType::UTF8String(self.description.to_owned()),
+        );
         obj_map
     }
 }
 
 #[derive(Debug)]
-pub struct OnStatus
-{
+pub struct OnStatus {
     command_name: String,
     transaction_id: usize,
 }
 
-impl OnStatus 
-{
-    pub fn new(transaction_id: usize) -> OnStatus
-    {
+impl OnStatus {
+    pub fn new(transaction_id: usize) -> OnStatus {
         OnStatus {
             command_name: "onStatus".to_owned(),
             transaction_id: transaction_id,
-
         }
     }
 
-    pub fn parse(&self) -> Result<BytesMut, Box<dyn std::error::Error>>
-    {
+    pub fn parse(&self) -> Result<BytesMut, Box<dyn std::error::Error>> {
         let mut writer = Amf0Writer::new(bytesio::bytes_writer::BytesWriter::new());
         writer.write_string(&self.command_name)?;
         let tmp = self.transaction_id as f64;
@@ -295,7 +398,7 @@ impl OnStatus
 pub struct SetDataFrame {
     data_name: String,
     metadata: String,
-    data: SetDataFrameData
+    data: SetDataFrameData,
 }
 
 impl SetDataFrame {
@@ -312,19 +415,38 @@ impl SetDataFrame {
         let decoded_msg = reader.read_all()?;
         let data_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(data_name)) => data_name.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected data name"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected data name",
+                )))
+            }
         };
         let metadata = match decoded_msg.get(1) {
             Some(Amf0ValueType::UTF8String(metadata)) => metadata.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected metadata"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected metadata",
+                )))
+            }
         };
         let data_obj = match decoded_msg.get(2) {
             Some(Amf0ValueType::Object(data_obj)) => data_obj.to_owned(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected data"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected data",
+                )))
+            }
         };
 
-        Ok(SetDataFrame::new(data_name, metadata, SetDataFrameData::parse(data_obj).unwrap()))
-    } 
+        Ok(SetDataFrame::new(
+            data_name,
+            metadata,
+            SetDataFrameData::parse(data_obj).unwrap(),
+        ))
+    }
 }
 
 #[derive(Debug)]
@@ -376,135 +498,228 @@ impl SetDataFrameData {
             encoder: "".to_owned(),
         }
     }
-    pub fn parse(data: IndexMap<String, Amf0ValueType>) -> Result<SetDataFrameData, Box<dyn std::error::Error>> {
+    pub fn parse(
+        data: IndexMap<String, Amf0ValueType>,
+    ) -> Result<SetDataFrameData, Box<dyn std::error::Error>> {
         let mut set_data_frame_data = SetDataFrameData::default();
 
         for (key, value) in data {
             match key.as_str() {
-                "duration" => {
-                    match value {
-                        Amf0ValueType::Number(duration) => set_data_frame_data.duration = duration,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "duration" => match value {
+                    Amf0ValueType::Number(duration) => set_data_frame_data.duration = duration,
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "fileSize" => {
-                    match value {
-                        Amf0ValueType::Number(file_size) => set_data_frame_data.file_size = file_size,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "fileSize" => match value {
+                    Amf0ValueType::Number(file_size) => set_data_frame_data.file_size = file_size,
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "width" => {
-                    match value {
-                        Amf0ValueType::Number(width) => set_data_frame_data.width = width,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "width" => match value {
+                    Amf0ValueType::Number(width) => set_data_frame_data.width = width,
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "height" => {
-                    match value {
-                        Amf0ValueType::Number(height) => set_data_frame_data.height = height,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "height" => match value {
+                    Amf0ValueType::Number(height) => set_data_frame_data.height = height,
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "videocodecid" => {
-                    match value {
-                        Amf0ValueType::Number(video_codec_id) => set_data_frame_data.video_codec_id = video_codec_id,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "videocodecid" => match value {
+                    Amf0ValueType::Number(video_codec_id) => {
+                        set_data_frame_data.video_codec_id = video_codec_id
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "videodatarate" => {
-                    match value {
-                        Amf0ValueType::Number(video_data_rate) => set_data_frame_data.video_data_rate = video_data_rate,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "videodatarate" => match value {
+                    Amf0ValueType::Number(video_data_rate) => {
+                        set_data_frame_data.video_data_rate = video_data_rate
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "framerate" => {
-                    match value {
-                        Amf0ValueType::Number(frame_rate) => set_data_frame_data.frame_rate = frame_rate,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "framerate" => match value {
+                    Amf0ValueType::Number(frame_rate) => {
+                        set_data_frame_data.frame_rate = frame_rate
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "audiocodecid" => {
-                    match value {
-                        Amf0ValueType::Number(audio_codec_id) => set_data_frame_data.audio_codec_id = audio_codec_id,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "audiocodecid" => match value {
+                    Amf0ValueType::Number(audio_codec_id) => {
+                        set_data_frame_data.audio_codec_id = audio_codec_id
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "audiodatarate" => {
-                    match value {
-                        Amf0ValueType::Number(audio_data_rate) => set_data_frame_data.audio_data_rate = audio_data_rate,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "audiodatarate" => match value {
+                    Amf0ValueType::Number(audio_data_rate) => {
+                        set_data_frame_data.audio_data_rate = audio_data_rate
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "audiosamplerate" => {
-                    match value {
-                        Amf0ValueType::Number(audio_sample_rate) => set_data_frame_data.audio_sample_rate = audio_sample_rate,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "audiosamplerate" => match value {
+                    Amf0ValueType::Number(audio_sample_rate) => {
+                        set_data_frame_data.audio_sample_rate = audio_sample_rate
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "audiosamplesize" => {
-                    match value {
-                        Amf0ValueType::Number(audio_sample_size) => set_data_frame_data.audio_sample_size = audio_sample_size,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "audiosamplesize" => match value {
+                    Amf0ValueType::Number(audio_sample_size) => {
+                        set_data_frame_data.audio_sample_size = audio_sample_size
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "audiochannels" => {
-                    match value {
-                        Amf0ValueType::Number(audio_channels) => set_data_frame_data.audio_channels = audio_channels,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected number"))),
+                "audiochannels" => match value {
+                    Amf0ValueType::Number(audio_channels) => {
+                        set_data_frame_data.audio_channels = audio_channels
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected number",
+                        )))
                     }
                 },
-                "stereo" => {
-                    match value {
-                        Amf0ValueType::Boolean(stereo) => set_data_frame_data.stereo = stereo,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "stereo" => match value {
+                    Amf0ValueType::Boolean(stereo) => set_data_frame_data.stereo = stereo,
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "2.1" => {
-                    match value {
-                        Amf0ValueType::Boolean(two_point_one) => set_data_frame_data.two_point_one = two_point_one,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "2.1" => match value {
+                    Amf0ValueType::Boolean(two_point_one) => {
+                        set_data_frame_data.two_point_one = two_point_one
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "3.1" => {
-                    match value {
-                        Amf0ValueType::Boolean(three_point_one) => set_data_frame_data.three_point_one = three_point_one,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "3.1" => match value {
+                    Amf0ValueType::Boolean(three_point_one) => {
+                        set_data_frame_data.three_point_one = three_point_one
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "4.0" => {
-                    match value {
-                        Amf0ValueType::Boolean(four_point_zero) => set_data_frame_data.four_point_zero = four_point_zero,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "4.0" => match value {
+                    Amf0ValueType::Boolean(four_point_zero) => {
+                        set_data_frame_data.four_point_zero = four_point_zero
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "4.1" => {
-                    match value {
-                        Amf0ValueType::Boolean(four_point_one) => set_data_frame_data.four_point_one = four_point_one,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "4.1" => match value {
+                    Amf0ValueType::Boolean(four_point_one) => {
+                        set_data_frame_data.four_point_one = four_point_one
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "5.1" => {
-                    match value {
-                        Amf0ValueType::Boolean(five_point_one) => set_data_frame_data.five_point_one = five_point_one,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "5.1" => match value {
+                    Amf0ValueType::Boolean(five_point_one) => {
+                        set_data_frame_data.five_point_one = five_point_one
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "7.1" => {
-                    match value {
-                        Amf0ValueType::Boolean(seven_point_one) => set_data_frame_data.seven_point_one = seven_point_one,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected boolean"))),
+                "7.1" => match value {
+                    Amf0ValueType::Boolean(seven_point_one) => {
+                        set_data_frame_data.seven_point_one = seven_point_one
+                    }
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected boolean",
+                        )))
                     }
                 },
-                "encoder" => {
-                    match value {
-                        Amf0ValueType::UTF8String(encoder) => set_data_frame_data.encoder = encoder,
-                        _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected string"))),
+                "encoder" => match value {
+                    Amf0ValueType::UTF8String(encoder) => set_data_frame_data.encoder = encoder,
+                    _ => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Expected string",
+                        )))
                     }
                 },
                 _ => {
                     error!("Unexpected key {:?}", key);
-                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Unexpected key")))
-                },
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "Unexpected key",
+                    )));
+                }
             }
         }
         Ok(set_data_frame_data)
@@ -531,7 +746,9 @@ pub struct SetChunkSizeMessage {
 
 impl SetChunkSizeMessage {
     pub fn new(chunk_size: u32) -> SetChunkSizeMessage {
-        SetChunkSizeMessage { chunk_size: chunk_size }
+        SetChunkSizeMessage {
+            chunk_size: chunk_size,
+        }
     }
 }
 
@@ -559,19 +776,33 @@ impl ResultObject {
 
     pub fn parse(&self) -> Result<BytesMut, Amf0WriteError> {
         let mut writer = Amf0Writer::new(bytesio::bytes_writer::BytesWriter::new());
-        writer.write_any(&Amf0ValueType::UTF8String(self.command_name.clone())).unwrap();
-        writer.write_any(&Amf0ValueType::Number(self.transaction_id as f64)).unwrap();
+        writer
+            .write_any(&Amf0ValueType::UTF8String(self.command_name.clone()))
+            .unwrap();
+        writer
+            .write_any(&Amf0ValueType::Number(self.transaction_id as f64))
+            .unwrap();
         if Option::is_some(&self.command_object) {
             let mut command_obj_map = IndexMap::new();
-            
-            command_obj_map.insert("fmsVer".to_string(), Amf0ValueType::UTF8String(self.command_object.as_ref().unwrap().fms_ver.clone()));
-            command_obj_map.insert("capabilities".to_string(), Amf0ValueType::Number(self.command_object.as_ref().unwrap().capabilities as f64));
-            
-            writer.write_any(&Amf0ValueType::Object(command_obj_map)).unwrap();
+
+            command_obj_map.insert(
+                "fmsVer".to_string(),
+                Amf0ValueType::UTF8String(self.command_object.as_ref().unwrap().fms_ver.clone()),
+            );
+            command_obj_map.insert(
+                "capabilities".to_string(),
+                Amf0ValueType::Number(self.command_object.as_ref().unwrap().capabilities as f64),
+            );
+
+            writer
+                .write_any(&Amf0ValueType::Object(command_obj_map))
+                .unwrap();
         } else {
             writer.write_any(&Amf0ValueType::Null).unwrap();
         }
-        writer.write_any(&Amf0ValueType::Number(self.stream_id as f64)).unwrap();
+        writer
+            .write_any(&Amf0ValueType::Number(self.stream_id as f64))
+            .unwrap();
         let tmp = writer.extract_current_bytes();
         Ok(tmp)
     }
@@ -603,7 +834,13 @@ pub struct ConnectObject {
 }
 
 impl ConnectObject {
-    pub fn _new(app: String, tc_url: String, flash_ver: String, sw_url: String, stream_type: String) -> ConnectObject {
+    pub fn _new(
+        app: String,
+        tc_url: String,
+        flash_ver: String,
+        sw_url: String,
+        stream_type: String,
+    ) -> ConnectObject {
         ConnectObject {
             app: app,
             flash_ver: flash_ver,
@@ -623,7 +860,9 @@ impl ConnectObject {
         }
     }
 
-    pub fn parse(data: IndexMap<String, Amf0ValueType>) -> Result<ConnectObject, Box<dyn std::error::Error>> {
+    pub fn parse(
+        data: IndexMap<String, Amf0ValueType>,
+    ) -> Result<ConnectObject, Box<dyn std::error::Error>> {
         let mut connect_object = ConnectObject::default();
 
         // Read the command object
@@ -657,8 +896,6 @@ impl ConnectObject {
                 _ => {}
             }
         }
-            
-
 
         Ok(connect_object)
     }
@@ -666,7 +903,7 @@ impl ConnectObject {
 
 #[derive(Debug)]
 pub struct BasicCommand {
-    pub command_name: String
+    pub command_name: String,
 }
 
 impl BasicCommand {
@@ -683,7 +920,12 @@ impl BasicCommand {
 
         let command_name = match decoded_msg.get(0) {
             Some(&Amf0ValueType::UTF8String(ref s)) => s.clone(),
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Invalid command name"))),
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Invalid command name",
+                )))
+            }
         };
 
         Ok(BasicCommand::new(command_name))
@@ -712,14 +954,25 @@ impl ConnectMessage {
 
         connect_message.id = match decoded_msg.get(1) {
             Some(&Amf0ValueType::Number(n)) => n as usize,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction ID")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected transaction ID",
+                )))
+            }
         };
 
         let decoded_obj = match decoded_msg.get(2) {
-        Some(&Amf0ValueType::Object(ref obj)) => obj,
-        _ => {
-                error!("Failed to get command object from decoded message: {:?}", decoded_msg);
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected command object")))
+            Some(&Amf0ValueType::Object(ref obj)) => obj,
+            _ => {
+                error!(
+                    "Failed to get command object from decoded message: {:?}",
+                    decoded_msg
+                );
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected command object",
+                )));
             }
         };
         connect_message.connect_object = ConnectObject::parse(decoded_obj.clone())?;
@@ -750,7 +1003,12 @@ impl CreateStream {
 
         let transaction_id = match decoded_msg.get(1) {
             Some(&Amf0ValueType::Number(n)) => n as usize,
-            _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected transaction ID")))
+            _ => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected transaction ID",
+                )))
+            }
         };
 
         Ok(CreateStream::new(transaction_id))

@@ -1,3 +1,4 @@
+#[allow(clippy::upper_case_acronyms)]
 use indexmap::IndexMap;
 
 #[derive(PartialEq, Clone, Debug)]

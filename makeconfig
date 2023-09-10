@@ -1,0 +1,5 @@
+BINARY_PATH=./target/release/rustic_rtmp
+PACKAGE_NAME=rustic-rtmp
+PACKAGE_VERSION=1.0.0
+PACKAGE_MAINTAINER=Tosic.Killer emil.schutt@gmail.com
+PACKAGE_DESCRIPTION=A rtmp server built in rust

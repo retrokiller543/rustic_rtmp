@@ -1,30 +1,15 @@
 // Path: src/server/connection.rs
-use crate::server::connection::message::message::{
-    ConnectMessage,
-    CreateStream,
-    PauseMessage,
-    PlayMessage,
-    RtmpMessage,
-    CommandObject,
-    ResultObject,
-    SetChunkSizeMessage,
-    AcknowledgementMessage,
-    BasicCommand,
-    ReleaseStream,
-    FCPublish,
-    Publish,
-    Event,
-    OnStatus,
-    SetDataFrame,
-    VideoData,
-    AudioData,
-};
 use crate::server::connection::define::msg_type_id;
+use crate::server::connection::message::message::{
+    AcknowledgementMessage, AudioData, BasicCommand, CommandObject, ConnectMessage, CreateStream,
+    Event, FCPublish, OnStatus, PauseMessage, PlayMessage, Publish, ReleaseStream, ResultObject,
+    RtmpMessage, SetChunkSizeMessage, SetDataFrame, VideoData,
+};
 
+use log::{error, info, warn};
 use rand::{Rng, SeedableRng};
-use tokio::io::{ AsyncReadExt, AsyncWriteExt };
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use log::{info, error, warn};
 
 pub const WINDOW_ACKNOWLEDGEMENT_SIZE: u32 = 4096;
 pub const SET_BANDWIDTH_SIZE: u32 = 4096;
@@ -37,10 +22,7 @@ pub struct Connection {
 #[warn(unreachable_code)]
 impl Connection {
     pub fn new(stream: TcpStream) -> Connection {
-        Connection {
-            stream,
-            marker: 0
-        }
+        Connection { stream, marker: 0 }
     }
 
     pub async fn handle(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -50,7 +32,7 @@ impl Connection {
         // Handle RTMP messages.
         // ...
         loop {
-           warn!("Listening for msg");
+            warn!("Listening for msg");
             let message = self.read_message().await?;
 
             match message {
@@ -138,38 +120,42 @@ impl Connection {
         Ok(())
     }
 
-    pub fn write_header(&mut self, msg_type_id: u8, msg_len: u32, timestamp: u32, stream_id: u32, chunk_basic_header: u8) -> [u8; 12] {
-        pub fn insert_bytes(dst: &mut[u8; 12], data: u32, start_idx: usize, end_idx: usize)
-        {
+    pub fn write_header(
+        &mut self,
+        msg_type_id: u8,
+        msg_len: u32,
+        timestamp: u32,
+        stream_id: u32,
+        chunk_basic_header: u8,
+    ) -> [u8; 12] {
+        pub fn insert_bytes(dst: &mut [u8; 12], data: u32, start_idx: usize, end_idx: usize) {
             let data_as_bytes = data.to_be_bytes();
 
             let mut i: usize = 0;
-            if end_idx - start_idx == 3
-            {
+            if end_idx - start_idx == 3 {
                 i = 1;
             }
 
-            for idx in start_idx..end_idx
-            {
+            for idx in start_idx..end_idx {
                 dst[idx] = data_as_bytes[i];
                 i += 1;
-            } 
+            }
         }
-        
+
         let mut header = [0; 12];
         header[0] = chunk_basic_header;
         insert_bytes(&mut header, timestamp, 1, 4);
         insert_bytes(&mut header, msg_len, 4, 7);
         header[7] = msg_type_id;
         insert_bytes(&mut header, stream_id, 8, 12);
-        
+
         info!("header: {:?}", header);
         header
     }
 
     async fn handle_connect(
         &mut self,
-        msg: ConnectMessage
+        msg: ConnectMessage,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a Connect message.
         // ...
@@ -182,7 +168,7 @@ impl Connection {
         info!("==========Start Connect msg Handle==========");
         info!("Connect message: {:?}", msg);
 
-        let ack_header = self.write_header(5, 4, 0, 0, 2);       
+        let ack_header = self.write_header(5, 4, 0, 0, 2);
         let mut ack_msg: [u8; 16] = [0; 16];
 
         ack_msg[0..12].copy_from_slice(&ack_header);
@@ -203,20 +189,19 @@ impl Connection {
         result_obj.set_command_object(e);
         let command = result_obj.parse()?;
         let command_vec: Vec<u8> = command.freeze().to_vec();
-        
+
         let command_header = self.write_header(20, command_vec.len() as u32, 0, 0, 2);
         let mut command_msg = Vec::new();
         command_msg.extend_from_slice(&command_header);
         command_msg.extend_from_slice(&command_vec);
-        
-        let mut set_peer_bandwidth  = Vec::new();
+
+        let mut set_peer_bandwidth = Vec::new();
         set_peer_bandwidth.extend_from_slice(&bandwidth_msg);
         set_peer_bandwidth.extend_from_slice(&command_msg);
         info!("set peer bandwidth: {:?}", set_peer_bandwidth);
         self.stream.write_all(&set_peer_bandwidth).await?;
 
         self.read_message().await?;
-        
 
         info!("==========End Connect msg Handle==========");
         Ok(())
@@ -224,7 +209,7 @@ impl Connection {
 
     async fn handle_create_stream(
         &mut self,
-        msg: CreateStream
+        msg: CreateStream,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Handle a CreateStream message.
         // ...
@@ -294,7 +279,7 @@ impl Connection {
 
     async fn read_message(&mut self) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         // Create a buffer to hold the message data.
-        let mut buffer = [0; 4096]; // Adjust the size as needed.
+        let mut buffer = vec![0; 12288]; // Adjust the size as needed.
 
         // Read data from the client into the buffer.
         let size = self.stream.read(&mut buffer).await?;
@@ -307,7 +292,10 @@ impl Connection {
         Ok(message)
     }
 
-    pub fn parse_msg_header(&mut self, data: &[u8]) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+    pub fn parse_msg_header(
+        &mut self,
+        data: &[u8],
+    ) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         if data.len() < 1 {
             error!("No message to read");
             return Err("No message to read".into());
@@ -321,41 +309,39 @@ impl Connection {
         Ok(msg)
     }
 
-    pub fn read_header_types(&mut self, data: &[u8], header: ChunkBasicHeader) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
-        match ChunkFmt::from_u8(header.fmt) 
-        {
-            Some(ChunkFmt::Type0) => 
-            {
+    pub fn read_header_types(
+        &mut self,
+        data: &[u8],
+        header: ChunkBasicHeader,
+    ) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+        match ChunkFmt::from_u8(header.fmt) {
+            Some(ChunkFmt::Type0) => {
                 let read_to = self.marker + 11;
                 let chunk_message_header = ChunkMessageHeader::type0(&data[self.marker..read_to]);
                 self.marker = read_to;
                 let msg = Connection::read_msg_type(self, &data, chunk_message_header);
                 return msg;
             }
-            Some(ChunkFmt::Type1) => 
-            {
+            Some(ChunkFmt::Type1) => {
                 let read_to = self.marker + 7;
                 let chunk_message_header = ChunkMessageHeader::type1(&data[self.marker..read_to]);
                 self.marker = read_to;
                 let msg = Connection::read_msg_type(self, &data, chunk_message_header);
                 return msg;
             }
-            Some(ChunkFmt::Type2) => 
-            {
+            Some(ChunkFmt::Type2) => {
                 let read_to = self.marker + 3;
                 let chunk_message_header = ChunkMessageHeader::type2(&data[self.marker..read_to]);
                 self.marker = read_to;
                 let msg = Connection::read_msg_type(self, &data, chunk_message_header);
                 return msg;
             }
-            Some(ChunkFmt::Type3) => 
-            {
+            Some(ChunkFmt::Type3) => {
                 let chunk_message_header = ChunkMessageHeader::type3();
                 let msg = Connection::read_msg_type(self, &data, chunk_message_header);
                 return msg;
             }
-            _ => 
-            {
+            _ => {
                 info!("Unknown chunk format");
             }
         }
@@ -363,7 +349,11 @@ impl Connection {
         Err("Unknown chunk format".into())
     }
 
-    pub fn read_msg_type(&mut self, data: &[u8], msg_header: ChunkMessageHeader) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
+    pub fn read_msg_type(
+        &mut self,
+        data: &[u8],
+        msg_header: ChunkMessageHeader,
+    ) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         match msg_header.message_type_id {
             Some(msg_type_id::SET_CHUNK_SIZE) => {
                 info!("Message type: Set Chunk Size");
@@ -398,14 +388,20 @@ impl Connection {
             Some(msg_type_id::AUDIO) => {
                 info!("Message type: Audio");
                 let read_to = self.marker + msg_header.message_length.unwrap() as usize;
-                let audio_data = AudioData::new(msg_header.message_stream_id.unwrap(), data[self.marker..read_to].to_vec());
+                let audio_data = AudioData::new(
+                    msg_header.message_stream_id.unwrap(),
+                    data[self.marker..read_to].to_vec(),
+                );
                 self.marker = read_to;
                 return Ok(RtmpMessage::AudioData(audio_data));
             }
             Some(msg_type_id::VIDEO) => {
                 info!("Message type: Video");
                 let read_to = self.marker + msg_header.message_length.unwrap() as usize;
-                let video_data = VideoData::new(msg_header.message_stream_id.unwrap(), data[self.marker..read_to].to_vec());
+                let video_data = VideoData::new(
+                    msg_header.message_stream_id.unwrap(),
+                    data[self.marker..read_to].to_vec(),
+                );
                 self.marker = read_to;
                 return Ok(RtmpMessage::VideoData(video_data));
             }
@@ -433,7 +429,7 @@ impl Connection {
                         }
                         _ => {
                             error!("Unknown Data: {:?}", msg_name);
-                            return Err("Unknown Data".into())
+                            return Err("Unknown Data".into());
                         }
                     }
                 }
@@ -448,7 +444,8 @@ impl Connection {
                 info!("Message type: Command AMF0");
                 if let Some(msg_len) = msg_header.message_length {
                     let read_to = self.marker + msg_len as usize;
-                    let command_name = BasicCommand::parse(&data[self.marker..read_to])?.command_name;
+                    let command_name =
+                        BasicCommand::parse(&data[self.marker..read_to])?.command_name;
                     info!("command_name: {:?}", command_name);
                     match command_name.as_str() {
                         "connect" => {
@@ -462,22 +459,19 @@ impl Connection {
                             self.marker = read_to;
                             return Ok(RtmpMessage::ReleaseStream(message));
                         }
-                        "FCPublish" => 
-                        {
+                        "FCPublish" => {
                             let message = FCPublish::parse(&data[self.marker..read_to])?;
                             info!("FCPublish: {:?}", message);
                             self.marker = read_to;
                             return Ok(RtmpMessage::FCPublish(message));
                         }
-                        "createStream" => 
-                        {
+                        "createStream" => {
                             let message = CreateStream::parse(&data[self.marker..read_to])?;
                             info!("createStream: {:?}", message);
                             self.marker = read_to;
                             return Ok(RtmpMessage::CreateStream(message));
                         }
-                        "publish" => 
-                        {
+                        "publish" => {
                             let message = Publish::parse(&data[self.marker..read_to])?;
                             info!("publish: {:?}", message);
                             self.marker = read_to;
@@ -485,7 +479,7 @@ impl Connection {
                         }
                         _ => {
                             error!("Unknown command: {:?}", command_name);
-                            return Err("Unknown command".into())
+                            return Err("Unknown command".into());
                         }
                     };
                 } else {
@@ -501,34 +495,31 @@ impl Connection {
                             info!("releaseStream: {:?}", message);
                             return Ok(RtmpMessage::ReleaseStream(message));
                         }
-                        "FCPublish" => 
-                        {
+                        "FCPublish" => {
                             let message = FCPublish::parse(&data[self.marker..])?;
                             info!("FCPublish: {:?}", message);
                             return Ok(RtmpMessage::FCPublish(message));
                         }
-                        "createStream" => 
-                        {
+                        "createStream" => {
                             let message = CreateStream::parse(&data[self.marker..])?;
                             info!("createStream: {:?}", message);
                             return Ok(RtmpMessage::CreateStream(message));
                         }
-                        "publish" => 
-                        {
+                        "publish" => {
                             let message = Publish::parse(&data[self.marker..])?;
                             info!("publish: {:?}", message);
                             return Ok(RtmpMessage::Publish(message));
                         }
                         _ => {
                             error!("Unknown command: {:?}", command_name);
-                            return Err("Unknown command".into())
+                            return Err("Unknown command".into());
                         }
                     };
                 }
             }
             _ => {
                 error!("Message type: Unknown");
-                return Err("Unknown message type".into())
+                return Err("Unknown message type".into());
             }
         }
         error!("Unknown message type");
@@ -537,16 +528,16 @@ impl Connection {
 
     fn parse_message(&mut self, data: &[u8]) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         info!("Parse Message data: {:?}", data);
-        
+
         let msg = Connection::parse_msg_header(self, &data)?;
 
         // check for more msg types
-        if self.marker < data.len() &&  &data[self.marker] != &0 {
+        if self.marker < data.len() && &data[self.marker] != &0 {
             warn!("more msg types");
             let message = Self::parse_message(self, &data)?;
             return Ok(message);
         }
-    
+
         Ok(msg)
     }
 
@@ -659,7 +650,8 @@ impl ChunkMessageHeader {
     fn type2(bytes: &[u8]) -> ChunkMessageHeader {
         let mut chunk_message_header = ChunkMessageHeader::default();
 
-        chunk_message_header.timestamp_delta = Some(u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]));
+        chunk_message_header.timestamp_delta =
+            Some(u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]));
 
         chunk_message_header
     }
@@ -668,7 +660,6 @@ impl ChunkMessageHeader {
         ChunkMessageHeader::default()
     }
 }
-
 
 #[allow(unused_mut)]
 #[cfg(test)]
@@ -686,7 +677,7 @@ mod tests {
 
         // Accept the connection on the server-side
         let (server, _) = listener.accept().await.unwrap();
-        
+
         // Create the Connection instance
         let mut conn = Connection::new(server);
 
@@ -698,23 +689,52 @@ mod tests {
         let (mut conn, mut client) = setup().await;
 
         // Emulate the client sending data
-        let mock_data: &[u8] = &[2, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 16, 0, 3, 0, 0, 0, 0, 0, 179, 20, 0, 0, 0, 0, 2, 0, 7, 99, 111, 110, 110, 101, 99, 116, 0, 63, 240, 0, 0, 0, 0, 0, 0, 3, 0, 3, 97, 112, 112, 2, 0, 4, 108, 105, 118, 101, 0, 4, 116, 121, 112, 101, 2, 0, 10, 110, 111, 110, 112, 114, 105, 118, 97, 116, 101, 0, 8, 102, 108, 97, 115, 104, 86, 101, 114, 2, 0, 31, 70, 77, 76, 69, 47, 51, 46, 48, 32, 40, 99, 111, 109, 112, 97, 116, 105, 98, 108, 101, 59, 32, 70, 77, 83, 99, 47, 49, 46, 48, 41, 0, 6, 115, 119, 102, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 5, 116, 99, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 0, 9];
-        client.write_all(mock_data).await.expect("Failed to write mock data");
+        let mock_data: &[u8] = &[
+            2, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 16, 0, 3, 0, 0, 0, 0, 0, 179, 20, 0, 0, 0, 0,
+            2, 0, 7, 99, 111, 110, 110, 101, 99, 116, 0, 63, 240, 0, 0, 0, 0, 0, 0, 3, 0, 3, 97,
+            112, 112, 2, 0, 4, 108, 105, 118, 101, 0, 4, 116, 121, 112, 101, 2, 0, 10, 110, 111,
+            110, 112, 114, 105, 118, 97, 116, 101, 0, 8, 102, 108, 97, 115, 104, 86, 101, 114, 2,
+            0, 31, 70, 77, 76, 69, 47, 51, 46, 48, 32, 40, 99, 111, 109, 112, 97, 116, 105, 98,
+            108, 101, 59, 32, 70, 77, 83, 99, 47, 49, 46, 48, 41, 0, 6, 115, 119, 102, 85, 114,
+            108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46,
+            49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 5, 116, 99, 85, 114, 108, 2,
+            0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49,
+            50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 0, 9,
+        ];
+        client
+            .write_all(mock_data)
+            .await
+            .expect("Failed to write mock data");
 
         // Read & handle the message in the Connection instance
         let message = conn.read_message().await.expect("Failed to read message");
         let result = match message {
             RtmpMessage::Connect(connect_message) => {
-                assert_eq!(connect_message.connect_object.app, "live", "App should be 'live'");
-                assert_eq!(connect_message.connect_object.flash_ver, "FMLE/3.0 (compatible; FMSc/1.0)", "Flash version should be 'FMLE/3.0 (compatible; FMSc/1.0)'");
-                assert_eq!(connect_message.connect_object.swf_url, "rtmp://192.168.1.112:1935/live", "SWF URL should be 'rtmp://192.168.1.112:1935/live'");
-                assert_eq!(connect_message.connect_object.tc_url, "rtmp://192.168.1.112:1935/live", "TC URL should be 'rtmp://192.168.1.112:1935/live'");
-                assert_eq!(connect_message.connect_object.stream_type, "nonprivate", "Stream type should be 'nonprivate'");
+                assert_eq!(
+                    connect_message.connect_object.app, "live",
+                    "App should be 'live'"
+                );
+                assert_eq!(
+                    connect_message.connect_object.flash_ver, "FMLE/3.0 (compatible; FMSc/1.0)",
+                    "Flash version should be 'FMLE/3.0 (compatible; FMSc/1.0)'"
+                );
+                assert_eq!(
+                    connect_message.connect_object.swf_url, "rtmp://192.168.1.112:1935/live",
+                    "SWF URL should be 'rtmp://192.168.1.112:1935/live'"
+                );
+                assert_eq!(
+                    connect_message.connect_object.tc_url, "rtmp://192.168.1.112:1935/live",
+                    "TC URL should be 'rtmp://192.168.1.112:1935/live'"
+                );
+                assert_eq!(
+                    connect_message.connect_object.stream_type, "nonprivate",
+                    "Stream type should be 'nonprivate'"
+                );
                 assert_eq!(connect_message.id, 1, "ID should be 1");
                 Ok(())
             }
             // ... handle other cases or use a default case.
-            _ => Err(Box::<dyn std::error::Error>::from("Unknown message type"))
+            _ => Err(Box::<dyn std::error::Error>::from("Unknown message type")),
         };
 
         // Check the result
@@ -727,7 +747,10 @@ mod tests {
 
         // Emulate the client sending data
         let mock_data: &[u8] = &[66, 0, 0, 0, 0, 0, 4, 3, 0, 0, 12, 35];
-        client.write_all(mock_data).await.expect("Failed to write mock data");
+        client
+            .write_all(mock_data)
+            .await
+            .expect("Failed to write mock data");
 
         // Read & handle the message in the Connection instance
         let message = conn.read_message().await.expect("Failed to read message");
@@ -737,7 +760,7 @@ mod tests {
                 Ok(())
             }
             // ... handle other cases or use a default case.
-            _ => Err(Box::<dyn std::error::Error>::from("Unknown message type"))
+            _ => Err(Box::<dyn std::error::Error>::from("Unknown message type")),
         };
 
         // Check the result
@@ -749,19 +772,35 @@ mod tests {
         let (mut conn, mut client) = setup().await;
 
         // Emulate the client sending data
-        let mock_data: &[u8] = &[67, 0, 0, 0, 0, 0, 38, 20, 2, 0, 13, 114, 101, 108, 101, 97, 115, 101, 83, 116, 114, 101, 97, 109, 0, 64, 0, 0, 0, 0, 0, 0, 0, 5, 2, 0, 9, 115, 116, 114, 101, 97, 109, 107, 101, 121, 67, 0, 0, 0, 0, 0, 34, 20, 2, 0, 9, 70, 67, 80, 117, 98, 108, 105, 115, 104, 0, 64, 8, 0, 0, 0, 0, 0, 0, 5, 2, 0, 9, 115, 116, 114, 101, 97, 109, 107, 101, 121, 67, 0, 0, 0, 0, 0, 25, 20, 2, 0, 12, 99, 114, 101, 97, 116, 101, 83, 116, 114, 101, 97, 109, 0, 64, 16, 0, 0, 0, 0, 0, 0, 5];
-        client.write_all(mock_data).await.expect("Failed to write mock data");
+        let mock_data: &[u8] = &[
+            67, 0, 0, 0, 0, 0, 38, 20, 2, 0, 13, 114, 101, 108, 101, 97, 115, 101, 83, 116, 114,
+            101, 97, 109, 0, 64, 0, 0, 0, 0, 0, 0, 0, 5, 2, 0, 9, 115, 116, 114, 101, 97, 109, 107,
+            101, 121, 67, 0, 0, 0, 0, 0, 34, 20, 2, 0, 9, 70, 67, 80, 117, 98, 108, 105, 115, 104,
+            0, 64, 8, 0, 0, 0, 0, 0, 0, 5, 2, 0, 9, 115, 116, 114, 101, 97, 109, 107, 101, 121, 67,
+            0, 0, 0, 0, 0, 25, 20, 2, 0, 12, 99, 114, 101, 97, 116, 101, 83, 116, 114, 101, 97,
+            109, 0, 64, 16, 0, 0, 0, 0, 0, 0, 5,
+        ];
+        client
+            .write_all(mock_data)
+            .await
+            .expect("Failed to write mock data");
 
         // Read & handle the message in the Connection instance
         let message = conn.read_message().await.expect("Failed to read message");
         let result = match message {
             RtmpMessage::CreateStream(create_stream) => {
-                assert_eq!(create_stream.command_name, "createStream", "Command name should be 'createStream'");
-                assert_eq!(create_stream.transaction_id, 4, "Transaction ID should be 4");
+                assert_eq!(
+                    create_stream.command_name, "createStream",
+                    "Command name should be 'createStream'"
+                );
+                assert_eq!(
+                    create_stream.transaction_id, 4,
+                    "Transaction ID should be 4"
+                );
                 Ok(())
             }
             // ... handle other cases or use a default case.
-            _ => Err(Box::<dyn std::error::Error>::from("Unknown message type"))
+            _ => Err(Box::<dyn std::error::Error>::from("Unknown message type")),
         };
 
         // Check the result
@@ -770,35 +809,65 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_connect() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.expect("Failed to bind");
+        let listener = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("Failed to bind");
         let server_addr = listener.local_addr().unwrap();
 
         // Simulate the client
         tokio::spawn(async move {
-            let mut client_stream = TcpStream::connect(server_addr).await.expect("Failed to connect");
-            let mock_data: &[u8] = &[2, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 16, 0, 3, 0, 0, 0, 0, 0, 179, 20, 0, 0, 0, 0, 2, 0, 7, 99, 111, 110, 110, 101, 99, 116, 0, 63, 240, 0, 0, 0, 0, 0, 0, 3, 0, 3, 97, 112, 112, 2, 0, 4, 108, 105, 118, 101, 0, 4, 116, 121, 112, 101, 2, 0, 10, 110, 111, 110, 112, 114, 105, 118, 97, 116, 101, 0, 8, 102, 108, 97, 115, 104, 86, 101, 114, 2, 0, 31, 70, 77, 76, 69, 47, 51, 46, 48, 32, 40, 99, 111, 109, 112, 97, 116, 105, 98, 108, 101, 59, 32, 70, 77, 83, 99, 47, 49, 46, 48, 41, 0, 6, 115, 119, 102, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 5, 116, 99, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 0, 9]; // Your mock RTMP connect data
-            client_stream.write_all(mock_data).await.expect("Failed to send mock data");
-            
+            let mut client_stream = TcpStream::connect(server_addr)
+                .await
+                .expect("Failed to connect");
+            let mock_data: &[u8] = &[
+                2, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 16, 0, 3, 0, 0, 0, 0, 0, 179, 20, 0, 0,
+                0, 0, 2, 0, 7, 99, 111, 110, 110, 101, 99, 116, 0, 63, 240, 0, 0, 0, 0, 0, 0, 3, 0,
+                3, 97, 112, 112, 2, 0, 4, 108, 105, 118, 101, 0, 4, 116, 121, 112, 101, 2, 0, 10,
+                110, 111, 110, 112, 114, 105, 118, 97, 116, 101, 0, 8, 102, 108, 97, 115, 104, 86,
+                101, 114, 2, 0, 31, 70, 77, 76, 69, 47, 51, 46, 48, 32, 40, 99, 111, 109, 112, 97,
+                116, 105, 98, 108, 101, 59, 32, 70, 77, 83, 99, 47, 49, 46, 48, 41, 0, 6, 115, 119,
+                102, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46, 49,
+                54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0, 5,
+                116, 99, 85, 114, 108, 2, 0, 30, 114, 116, 109, 112, 58, 47, 47, 49, 57, 50, 46,
+                49, 54, 56, 46, 49, 46, 49, 49, 50, 58, 49, 57, 51, 53, 47, 108, 105, 118, 101, 0,
+                0, 9,
+            ]; // Your mock RTMP connect data
+            client_stream
+                .write_all(mock_data)
+                .await
+                .expect("Failed to send mock data");
+
             // Read server responses, send ack, etc.
             // ...
-                    // Read server responses
+            // Read server responses
             let mut response_buffer = [0u8; 4096];
-            client_stream.read(&mut response_buffer).await.expect("Failed to read server response");
-            
+            client_stream
+                .read(&mut response_buffer)
+                .await
+                .expect("Failed to read server response");
+
             // TODO: Parse the server's response if necessary and determine if an acknowledgment or other message should be sent.
 
             // Send acknowledgment or other message
             let ack_data: &[u8] = &[66, 0, 0, 0, 0, 0, 4, 3, 0, 0, 12, 35]; // Your mock acknowledgment data
-            client_stream.write_all(ack_data).await.expect("Failed to send acknowledgment");
+            client_stream
+                .write_all(ack_data)
+                .await
+                .expect("Failed to send acknowledgment");
         });
 
         // Server handling
-        let (mut server_stream, _) = listener.accept().await.expect("Failed to accept connection");
+        let (mut server_stream, _) = listener
+            .accept()
+            .await
+            .expect("Failed to accept connection");
         let mut conn = Connection::new(server_stream);
         let rtmp_message = conn.read_message().await.expect("Failed to read message");
 
         if let RtmpMessage::Connect(connect_msg) = rtmp_message {
-            conn.handle_connect(connect_msg).await.expect("Failed to handle connect message");
+            conn.handle_connect(connect_msg)
+                .await
+                .expect("Failed to handle connect message");
         } else {
             println!("Received message: {:?}", rtmp_message);
             panic!("Expected a ConnectMessage but received a different type");

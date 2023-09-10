@@ -1,3 +1,3 @@
 pub mod connection;
-pub mod message;
 mod define;
+pub mod message;

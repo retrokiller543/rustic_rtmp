@@ -1,5 +1,7 @@
 use {
-    super::{amf0_markers, errors::Amf0WriteErrorValue, define::Amf0ValueType, errors::Amf0WriteError},
+    super::{
+        amf0_markers, define::Amf0ValueType, errors::Amf0WriteError, errors::Amf0WriteErrorValue,
+    },
     byteorder::BigEndian,
     bytes::BytesMut,
     bytesio::bytes_writer::BytesWriter,
