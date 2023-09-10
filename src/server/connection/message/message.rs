@@ -18,8 +18,8 @@ use crate::server::connection::message::amf0::{
     amf0_reader::Amf0Reader, amf0_writer::Amf0Writer, define::Amf0ValueType,
 };
 
-use super::amf0::errors::{Amf0ReadError, Amf0WriteError};
-use log::{error, info};
+use super::amf0::errors::{Amf0WriteError};
+use log::{error};
 
 #[derive(Debug)]
 pub enum RtmpMessage {
@@ -51,8 +51,8 @@ pub struct AudioData {
 impl AudioData {
     pub fn new(stream_id: u32, data: Vec<u8>) -> AudioData {
         AudioData {
-            stream_id: stream_id,
-            data: data,
+            stream_id,
+            data,
         }
     }
 }
@@ -66,8 +66,8 @@ pub struct VideoData {
 impl VideoData {
     pub fn new(stream_id: u32, data: Vec<u8>) -> VideoData {
         VideoData {
-            stream_id: stream_id,
-            data: data,
+            stream_id,
+            data,
         }
     }
 }
@@ -81,8 +81,8 @@ pub struct Event {
 impl Event {
     pub fn new(event_type: u16, stream_id: u32) -> Event {
         Event {
-            event_type: event_type,
-            stream_id: stream_id,
+            event_type,
+            stream_id,
         }
     }
 
@@ -117,16 +117,16 @@ impl Publish {
         stream_type: String,
     ) -> Publish {
         Publish {
-            command_name: command_name,
-            transaction_id: transaction_id,
-            amf0_null: amf0_null,
-            stream_key: stream_key,
-            stream_type: stream_type,
+            command_name,
+            transaction_id,
+            amf0_null,
+            stream_key,
+            stream_type,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<Publish, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
         let decoded_msg = reader.read_all().unwrap();
         let command_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
@@ -200,16 +200,16 @@ impl FCPublish {
         stream_key: String,
     ) -> FCPublish {
         FCPublish {
-            command_name: command_name,
-            transaction_id: transaction_id,
-            amf0_null: amf0_null,
-            stream_key: stream_key,
+            command_name,
+            transaction_id,
+            amf0_null,
+            stream_key,
             stream_id: None,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<FCPublish, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
         let decoded_msg = reader.read_all().unwrap();
         let command_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
@@ -272,15 +272,15 @@ impl ReleaseStream {
         stream_key: String,
     ) -> ReleaseStream {
         ReleaseStream {
-            command_name: command_name,
-            transaction_id: transaction_id,
-            amf0_null: amf0_null,
-            stream_key: stream_key,
+            command_name,
+            transaction_id,
+            amf0_null,
+            stream_key,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<ReleaseStream, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
         let decoded_msg = reader.read_all()?;
         let command_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(command_name)) => command_name.to_owned(),
@@ -346,7 +346,7 @@ impl OnStatusObject {
     }
 
     pub fn parse(&self) -> IndexMap<String, Amf0ValueType> {
-        let mut writer = Amf0Writer::new(bytesio::bytes_writer::BytesWriter::new());
+        let _writer = Amf0Writer::new(bytesio::bytes_writer::BytesWriter::new());
         let mut obj_map = IndexMap::new();
         obj_map.insert(
             "level".to_owned(),
@@ -374,7 +374,7 @@ impl OnStatus {
     pub fn new(transaction_id: usize) -> OnStatus {
         OnStatus {
             command_name: "onStatus".to_owned(),
-            transaction_id: transaction_id,
+            transaction_id,
         }
     }
 
@@ -404,14 +404,14 @@ pub struct SetDataFrame {
 impl SetDataFrame {
     pub fn new(data_name: String, metadata: String, data: SetDataFrameData) -> SetDataFrame {
         SetDataFrame {
-            data_name: data_name,
-            metadata: metadata,
-            data: data,
+            data_name,
+            metadata,
+            data,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<SetDataFrame, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
         let decoded_msg = reader.read_all()?;
         let data_name = match decoded_msg.get(0) {
             Some(Amf0ValueType::UTF8String(data_name)) => data_name.to_owned(),
@@ -734,7 +734,7 @@ pub struct AcknowledgementMessage {
 impl AcknowledgementMessage {
     pub fn new(sequence_number: u32) -> AcknowledgementMessage {
         AcknowledgementMessage {
-            sequence_number: sequence_number,
+            sequence_number,
         }
     }
 }
@@ -747,7 +747,7 @@ pub struct SetChunkSizeMessage {
 impl SetChunkSizeMessage {
     pub fn new(chunk_size: u32) -> SetChunkSizeMessage {
         SetChunkSizeMessage {
-            chunk_size: chunk_size,
+            chunk_size,
         }
     }
 }
@@ -763,10 +763,10 @@ pub struct ResultObject {
 impl ResultObject {
     pub fn new(command_name: String, transaction_id: usize, stream_id: usize) -> ResultObject {
         ResultObject {
-            command_name: command_name,
-            transaction_id: transaction_id,
+            command_name,
+            transaction_id,
             command_object: None,
-            stream_id: stream_id,
+            stream_id,
         }
     }
 
@@ -816,11 +816,11 @@ pub struct CommandObject {
 
 impl CommandObject {
     pub fn new(fms_ver: String, capabilities: usize) -> CommandObject {
-        let command_object = CommandObject {
-            fms_ver: fms_ver,
-            capabilities: capabilities,
-        };
-        command_object
+        
+        CommandObject {
+            fms_ver,
+            capabilities,
+        }
     }
 }
 
@@ -842,11 +842,11 @@ impl ConnectObject {
         stream_type: String,
     ) -> ConnectObject {
         ConnectObject {
-            app: app,
-            flash_ver: flash_ver,
+            app,
+            flash_ver,
             swf_url: sw_url,
-            tc_url: tc_url,
-            stream_type: stream_type,
+            tc_url,
+            stream_type,
         }
     }
 
@@ -909,17 +909,17 @@ pub struct BasicCommand {
 impl BasicCommand {
     pub fn new(command_name: String) -> BasicCommand {
         BasicCommand {
-            command_name: command_name,
+            command_name,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<BasicCommand, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
 
         let decoded_msg = reader.read_all()?;
 
         let command_name = match decoded_msg.get(0) {
-            Some(&Amf0ValueType::UTF8String(ref s)) => s.clone(),
+            Some(Amf0ValueType::UTF8String(s)) => s.clone(),
             _ => {
                 return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -941,13 +941,13 @@ pub struct ConnectMessage {
 impl ConnectMessage {
     pub fn new(id: usize, connect_object: ConnectObject) -> ConnectMessage {
         ConnectMessage {
-            connect_object: connect_object,
-            id: id,
+            connect_object,
+            id,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<ConnectMessage, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
         let mut connect_message = ConnectMessage::new(0, ConnectObject::default());
 
         let decoded_msg = reader.read_all()?;
@@ -963,7 +963,7 @@ impl ConnectMessage {
         };
 
         let decoded_obj = match decoded_msg.get(2) {
-            Some(&Amf0ValueType::Object(ref obj)) => obj,
+            Some(Amf0ValueType::Object(obj)) => obj,
             _ => {
                 error!(
                     "Failed to get command object from decoded message: {:?}",
@@ -991,13 +991,13 @@ impl CreateStream {
     pub fn new(transaction_id: usize) -> CreateStream {
         CreateStream {
             command_name: "createStream".to_string(),
-            transaction_id: transaction_id,
+            transaction_id,
             amf0_null: Amf0ValueType::Null,
         }
     }
 
     pub fn parse(data: &[u8]) -> Result<CreateStream, Box<dyn std::error::Error>> {
-        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(&data[..])));
+        let mut reader = Amf0Reader::new(BytesReader::new(BytesMut::from(data)));
 
         let decoded_msg = reader.read_all()?;
 

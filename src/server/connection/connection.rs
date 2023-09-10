@@ -296,7 +296,7 @@ impl Connection {
         &mut self,
         data: &[u8],
     ) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
-        if data.len() < 1 {
+        if data.is_empty() {
             error!("No message to read");
             return Err("No message to read".into());
         }
@@ -305,7 +305,7 @@ impl Connection {
         let basic_header = ChunkBasicHeader::new(&data[self.marker]);
         self.marker += 1;
         info!("fmt: {}, cs: {}", basic_header.fmt, basic_header.cs);
-        let msg = Connection::read_header_types(self, &data, basic_header)?;
+        let msg = Connection::read_header_types(self, data, basic_header)?;
         Ok(msg)
     }
 
@@ -319,26 +319,26 @@ impl Connection {
                 let read_to = self.marker + 11;
                 let chunk_message_header = ChunkMessageHeader::type0(&data[self.marker..read_to]);
                 self.marker = read_to;
-                let msg = Connection::read_msg_type(self, &data, chunk_message_header);
+                let msg = Connection::read_msg_type(self, data, chunk_message_header);
                 return msg;
             }
             Some(ChunkFmt::Type1) => {
                 let read_to = self.marker + 7;
                 let chunk_message_header = ChunkMessageHeader::type1(&data[self.marker..read_to]);
                 self.marker = read_to;
-                let msg = Connection::read_msg_type(self, &data, chunk_message_header);
+                let msg = Connection::read_msg_type(self, data, chunk_message_header);
                 return msg;
             }
             Some(ChunkFmt::Type2) => {
                 let read_to = self.marker + 3;
                 let chunk_message_header = ChunkMessageHeader::type2(&data[self.marker..read_to]);
                 self.marker = read_to;
-                let msg = Connection::read_msg_type(self, &data, chunk_message_header);
+                let msg = Connection::read_msg_type(self, data, chunk_message_header);
                 return msg;
             }
             Some(ChunkFmt::Type3) => {
                 let chunk_message_header = ChunkMessageHeader::type3();
-                let msg = Connection::read_msg_type(self, &data, chunk_message_header);
+                let msg = Connection::read_msg_type(self, data, chunk_message_header);
                 return msg;
             }
             _ => {
@@ -529,12 +529,12 @@ impl Connection {
     fn parse_message(&mut self, data: &[u8]) -> Result<RtmpMessage, Box<dyn std::error::Error>> {
         info!("Parse Message data: {:?}", data);
 
-        let msg = Connection::parse_msg_header(self, &data)?;
+        let msg = Connection::parse_msg_header(self, data)?;
 
         // check for more msg types
         if self.marker < data.len() && &data[self.marker] != &0 {
             warn!("more msg types");
-            let message = Self::parse_message(self, &data)?;
+            let message = Self::parse_message(self, data)?;
             return Ok(message);
         }
 
@@ -585,7 +585,7 @@ impl ChunkBasicHeader {
         let cs = byte & 0b_00111111;
         let fmt = (byte >> 6) & 0b_00000011;
 
-        ChunkBasicHeader { fmt: fmt, cs: cs }
+        ChunkBasicHeader { fmt, cs }
     }
 }
 

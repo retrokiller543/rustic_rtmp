@@ -1,7 +1,7 @@
 use log::error;
 use {
     bytesio::bytes_errors::{BytesReadError, BytesWriteError},
-    failure::{Backtrace, Fail},
+    failure::{Fail},
     std::{
         fmt, {io, string},
     },
